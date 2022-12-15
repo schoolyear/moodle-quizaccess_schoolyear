@@ -54,7 +54,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                     CURLOPT_TIMEOUT => 30,
                     CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
                     CURLOPT_CUSTOMREQUEST => "POST",
-                    CURLOPT_POSTFIELDS => "{\"display_name\":\"" . $quiz->name . "\",\"start_time\":\"" . gmdate("Y-m-d\TH:i:s\Z", $quiz->timeopen) . "\",\"end_time\":\"" . gmdate("Y-m-d\TH:i:s\Z", $quiz->timeclose) . "\",\"expected_workspaces\":20,\"workspace\":{\"vault\":{\"content\":{\"elements\":{\"7cea7a20-5b8a-4d75-bd17-096492e5a460\":{\"type\":\"web_page_entire_domain\",\"url_entire_domain\":{\"url\":\"http://localhost:8888/\",\"require_exact_port\":false}},\"26ab94c0-81aa-46e9-907f-80a97a2157dc\":{\"type\":\"web_page_url\",\"url\":{\"url\":\"http://localhost:8888/moodle40/mod/quiz/view.php?id=13\"}}},\"exit_points\":[{\"element_id\":\"26ab94c0-81aa-46e9-907f-80a97a2157dc\"}]}}}}",
+                    CURLOPT_POSTFIELDS => "{\"display_name\":\"" . $quiz->name . "\",\"start_time\":\"" . gmdate("Y-m-d\TH:i:s\Z", $quiz->timeopen) . "\",\"end_time\":\"" . gmdate("Y-m-d\TH:i:s\Z", $quiz->timeclose) . "\",\"expected_workspaces\":20,\"workspace\":{\"vault\":{\"content\":{\"elements\":{\"7cea7a20-5b8a-4d75-bd17-096492e5a460\":{\"type\":\"web_page_entire_domain\",\"url_entire_domain\":{\"url\":\"http://localhost:8888/\",\"require_exact_port\":false}},\"26ab94c0-81aa-46e9-907f-80a97a2157dc\":{\"type\":\"web_page_url\",\"url\":{\"url\":\"http://localhost:8888/moodle401/mod/quiz/view.php?id=13\"}}},\"exit_points\":[{\"element_id\":\"26ab94c0-81aa-46e9-907f-80a97a2157dc\"}]}}}}",
                     CURLOPT_HTTPHEADER => [
                         "Content-Type: application/json",
                         "X-Sy-Api: " . get_config('quizaccess_schoolyear', 'apikey')
@@ -128,7 +128,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             CURLOPT_TIMEOUT => 30,
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
             CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => "{\"personal_information\":{\"org_code\":\"" . $USER->idnumber . "\",\"first_name\":\"" . $USER->firstname . "\",\"last_name\":\"" . $USER->lastname . "\"},\"federated_user_id\": \"" . $USER->idnumber . "\",\"vault\":{\"content\":{\"elements\": {\n        \"d1ea19ba-2b3b-41e7-8904-3d78e4cea066\": {\n          \"type\": \"web_page_url\",\n          \"url\": {\n            \"url\": \"http://localhost:8888/moodle40/mod/quiz/view.php?id=13\"\n          }\n        }\n      },\n      \"entry_points\": [\n        {\n          \"element_id\": \"d1ea19ba-2b3b-41e7-8904-3d78e4cea066\"\n        }\n      ]\n    }\n  }\n}",
+            CURLOPT_POSTFIELDS => "{\"personal_information\":{\"org_code\":\"" . $USER->idnumber . "\",\"first_name\":\"" . $USER->firstname . "\",\"last_name\":\"" . $USER->lastname . "\"},\"federated_user_id\": \"" . $USER->idnumber . "\",\"vault\":{\"content\":{\"elements\": {\n        \"d1ea19ba-2b3b-41e7-8904-3d78e4cea066\": {\n          \"type\": \"web_page_url\",\n          \"url\": {\n            \"url\": \"http://localhost:8888/moodle401/mod/quiz/view.php?id=13\"\n          }\n        }\n      },\n      \"entry_points\": [\n        {\n          \"element_id\": \"d1ea19ba-2b3b-41e7-8904-3d78e4cea066\"\n        }\n      ]\n    }\n  }\n}",
             CURLOPT_HTTPHEADER => [
                 "Content-Type: application/json",
                 "X-Sy-Api: " . get_config('quizaccess_schoolyear', 'apikey')
