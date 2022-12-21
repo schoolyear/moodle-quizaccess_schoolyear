@@ -1,5 +1,7 @@
 <?php
 
+use quizaccess_schoolyear\quiz_settings;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
@@ -16,18 +18,16 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return new self($quizobj, $timenow);
     }
 
-    public function description() {
-        // error_log(print_r($this->quiz, true));
-        return array('description');
-    }
-
     public static function add_settings_form_fields(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $mform->addElement('select', 'schoolyearenabled', get_string('schoolyearenabled', 'quizaccess_schoolyear'),
                 array(
                     0 => get_string('schoolyeardisabledoption', 'quizaccess_schoolyear'),
                     1 => get_string('schoolyearenabledoption', 'quizaccess_schoolyear'),
                 ));
-        $mform->addHelpButton('schoolyearenabled', 'schoolyearenabled', 'quizaccess_schoolyear');
+
+        self::add_settings_ui_button($quizform, $mform);
+        self::add_dashboard_ui_button($quizform, $mform);
+        self::add_settings_dashboard_ui_label($quizform, $mform);
     }
     
     public static function get_settings_sql($quizid) {
@@ -60,18 +60,13 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                         "X-Sy-Api: " . get_config('quizaccess_schoolyear', 'apikey')
                     ],
                 ]);
-                
                 $response = curl_exec($curl);
                 $err = curl_error($curl);
-                
                 curl_close($curl);
-                
                 if ($err) {
                     error_log("cURL Error #:" . $err);
                 } else {
-                    error_log($response);
                     $exam = json_decode($response);
-                    
                     $record = new stdClass();
                     $record->quizid = $quiz->id;
                     $record->schoolyearenabled = 1;
@@ -114,7 +109,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             if ($err) {
                 error_log("cURL Error #:" . $err);
             } else {
-                error_log($response);
                 return false;
             }
         }
@@ -144,10 +138,91 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $decoded_json = json_decode($response, false);
 
         $buttonlink = html_writer::start_tag('div', array('class' => 'singlebutton'));
-        $buttonlink .= html_writer::link($decoded_json->onboarding_url, 'Open Schoolyear browser',
-            ['class' => 'btn btn-primary', 'title' => 'Open Schoolyear browser']);
+        $buttonlink .= html_writer::link($decoded_json->onboarding_url, 'Start Schoolyear exam',
+            ['class' => 'btn btn-primary', 'title' => 'Start exam']);
         $buttonlink .= html_writer::end_tag('div');
 
         return array('This exam requires the Schoolyear browser.', $buttonlink);
+    }
+
+    public static function add_settings_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
+        $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
+        if (!empty($record)) {
+            $curl = curl_init();
+            curl_setopt_array($curl, [
+                CURLOPT_URL => get_config('quizaccess_schoolyear', 'apibaseaddress') . "/v2/exam/" . $record->get('examid') . "/ui/settings",
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => "",
+                CURLOPT_HTTPHEADER => [
+                    "Content-Type: application/json",
+                    "X-Sy-Api: " . get_config('quizaccess_schoolyear', 'apikey')
+                ],
+            ]);
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+            curl_close($curl);
+            if ($err) {
+                error_log(print_r($err, true));
+            } else {
+                $decoded_json = json_decode($response, false);
+                $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
+                $btn .= html_writer::link($decoded_json->url, 'Open settings', ['class' => 'btn btn-secondary', 'title' => 'Go to exam settings']);
+                $btn .= html_writer::end_tag('div');
+                $btngroup=array();
+                $btngroup[] =& $mform->createElement('html', $btn);
+                $mform->addGroup($btngroup, 'sy-settings-btn', 'Settings UI', ' ', false);
+                $mform->hideIf('sy-settings-btn', 'schoolyearenabled', 'neq', 1);
+            }
+        }
+    }
+
+    public static function add_dashboard_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
+        $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
+        if (!empty($record)) {
+            $curl = curl_init();
+            curl_setopt_array($curl, [
+                CURLOPT_URL => get_config('quizaccess_schoolyear', 'apibaseaddress') . "/v2/exam/" . $record->get('examid') . "/ui/dashboard",
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 30,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => "",
+                CURLOPT_HTTPHEADER => [
+                    "Content-Type: application/json",
+                    "X-Sy-Api: " . get_config('quizaccess_schoolyear', 'apikey')
+                ],
+            ]);
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+            curl_close($curl);
+            if ($err) {
+                error_log(print_r($err, true));
+            } else {
+                $decoded_json = json_decode($response, false);
+                $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
+                $btn .= html_writer::link($decoded_json->url, 'Open dashboard', ['class' => 'btn btn-secondary', 'title' => 'Go to exam dashboard']);
+                $btn .= html_writer::end_tag('div');
+                $btngroup = array();
+                $btngroup[] =& $mform->createElement('html', $btn);
+                $mform->addGroup($btngroup, 'sy-dashboard-btn', 'Dashboard UI', ' ', false);
+                $mform->hideIf('sy-dashboard-btn', 'schoolyearenabled', 'neq', 1);
+            }
+        }
+    }
+
+    public static function add_settings_dashboard_ui_label(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
+        $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
+        if (empty($record)) {
+            $group = array($mform->createElement('static', 'sy-btn-label', 'alert', 'Save to access the settings and dashboard buttons for this exam.'));
+            $mform->addGroup($group, 'sy-label-group', '', ' ', false);
+            $mform->hideIf('sy-label-group', 'schoolyearenabled', 'neq', 1);
+        }
     }
 }
