@@ -187,6 +187,29 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             $mform->hideIf('sy-label-group', 'schoolyearenabled', 'neq', 1);
         }
     }
+
+    public static function validate_settings_form_fields(array $errors, array $data, $files, mod_quiz_mod_form $quizform) {
+        $timeopen = $data['timeopen'];
+        $timeclose = $data['timeclose'];
+        $schoolyearenabled = $data['schoolyearenabled'];
+
+        if ($schoolyearenabled) {
+            if ($timeopen == 0 || $timeclose == 0) {
+                $msg = 'Opening and closing time must be set for a Schoolyear exam.';
+                array_push($errors, $msg);
+                \core\notification::error($msg);
+                return $errors;
+            }
+
+            if ($timeclose-$timeopen > 86400) {
+                $msg = 'A Schoolyear exam must be a maximum of 24 hours.';
+                array_push($errors, $msg);
+                \core\notification::error($msg);
+            }
+        }
+
+        return $errors;
+    }
     
     public static function get_settings_sql($quizid) {
         return array(
