@@ -26,72 +26,62 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             return false;
         }
 
-        $result = self::create_workspace($this->quiz->examid);
+        $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid);
         return array($result);
     }
 
     public static function validate_signature() {
         if (isset($_SERVER[self::X_SY_SIGNATURE_HEADER])) {
-            $curl = curl_init();
-            curl_setopt_array($curl, [
-                CURLOPT_URL => get_config('quizaccess_schoolyear', 'apibaseaddress') . "/v2/signature/validate",
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => "POST",
-                CURLOPT_POSTFIELDS => "{\"x_sy_signature\":\"" . trim($_SERVER[self::X_SY_SIGNATURE_HEADER]) . "\"}",
-                CURLOPT_HTTPHEADER => [
-                    "Content-Type: application/json",
-                    "X-Sy-Api: " . get_config('quizaccess_schoolyear', 'apikey')
-                ],
-            ]);
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            curl_close($curl);
+            $json = json_encode(array('x_sy_signature' => trim($_SERVER[self::X_SY_SIGNATURE_HEADER])));
+            $response = self::api_request('POST', '/v2/signature/validate', $json);
 
-            if ($err) {
-                return 'An error occurred while validating signature.';
-            } else {
+            if ($response) {
                 return true;
+            } else {
+                return 'An error occurred while validating signature.';
             }
         }
 
         return false;
     }
 
-    public static function create_workspace($examid) {
+    public static function create_workspace($examid, $cmid) {
         global $USER;
+        global $CFG;
+        $element_id = \core\uuid::generate();
+        $json = json_encode(array(
+            'personal_information' => array(
+                'org_code' => $USER->idnumber,
+                'first_name' => $USER->firstname,
+                'last_name' => $USER->lastname
+            ),
+            'federated_user_id' => $USER->idnumber,
+            'vault' => array(
+                'content' => array(
+                    'elements' => array(
+                        $element_id => array(
+                            'type' => 'web_page_url',
+                            'url' => array(
+                                'url' => "$CFG->wwwroot/mod/quiz/view.php?id=$cmid"
+                            )
+                        )
+                    ),
+                    'entry_points' => array(
+                        array('element_id' => $element_id)
+                    )
+                )
+            )
+        ), JSON_UNESCAPED_SLASHES);
 
-        $curl = curl_init();
-        curl_setopt_array($curl, [
-            CURLOPT_URL => get_config('quizaccess_schoolyear', 'apibaseaddress') . "/v2/exam/" . $examid . "/workspace",
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => "{\"personal_information\":{\"org_code\":\"" . $USER->idnumber . "\",\"first_name\":\"" . $USER->firstname . "\",\"last_name\":\"" . $USER->lastname . "\"},\"federated_user_id\": \"" . $USER->idnumber . "\",\"vault\":{\"content\":{\"elements\": {\n        \"d1ea19ba-2b3b-41e7-8904-3d78e4cea066\": {\n          \"type\": \"web_page_url\",\n          \"url\": {\n            \"url\": \"http://localhost:8888/moodle401/mod/quiz/view.php?id=13\"\n          }\n        }\n      },\n      \"entry_points\": [\n        {\n          \"element_id\": \"d1ea19ba-2b3b-41e7-8904-3d78e4cea066\"\n        }\n      ]\n    }\n  }\n}",
-            CURLOPT_HTTPHEADER => [
-                "Content-Type: application/json",
-                "X-Sy-Api: " . get_config('quizaccess_schoolyear', 'apikey')
-            ],
-        ]);
-        $response = curl_exec($curl);
-        $err = curl_error($curl);
-        curl_close($curl);
+        $response = self::api_request("POST", "/v2/exam/$examid/workspace", $json);
 
-        if ($err) {
-            return 'An error occurred while generating Schoolyear exam link.';
-        }
-        else {
-            $decoded_json = json_decode($response, false);
+        if ($response) {
             $button = html_writer::start_tag('div', array('class' => 'singlebutton'));
-            $button .= html_writer::link($decoded_json->onboarding_url, 'Start Schoolyear exam', ['class' => 'btn btn-primary', 'title' => 'Start exam']);
+            $button .= html_writer::link($response->onboarding_url, 'Start Schoolyear exam', ['class' => 'btn btn-primary', 'title' => 'Start exam']);
             $button .= html_writer::end_tag('div');
             return $button;
+        } else {
+            error_log('error creating workspace');
         }
     }
 
@@ -110,35 +100,19 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     public static function add_settings_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
         if (!empty($record)) {
-            $curl = curl_init();
-            curl_setopt_array($curl, [
-                CURLOPT_URL => get_config('quizaccess_schoolyear', 'apibaseaddress') . "/v2/exam/" . $record->get('examid') . "/ui/settings",
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => "POST",
-                CURLOPT_POSTFIELDS => "",
-                CURLOPT_HTTPHEADER => [
-                    "Content-Type: application/json",
-                    "X-Sy-Api: " . get_config('quizaccess_schoolyear', 'apikey')
-                ],
-            ]);
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            curl_close($curl);
-            if ($err) {
-                error_log(print_r($err, true));
-            } else {
-                $decoded_json = json_decode($response, false);
+            $examid = $record->get('examid');
+
+            $response = self::api_request('POST', "/v2/exam/$examid/ui/settings");
+
+            if ($response) {
                 $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
-                $btn .= html_writer::link($decoded_json->url, 'Open settings', ['class' => 'btn btn-secondary', 'title' => 'Go to exam settings']);
+                $btn .= html_writer::link($response->url, 'Open settings', ['class' => 'btn btn-secondary', 'title' => 'Go to exam settings']);
                 $btn .= html_writer::end_tag('div');
-                $btngroup=array();
-                $btngroup[] =& $mform->createElement('html', $btn);
+                $btngroup = array($mform->createElement('html', $btn));
                 $mform->addGroup($btngroup, 'sy-settings-btn', 'Settings UI', ' ', false);
                 $mform->hideIf('sy-settings-btn', 'schoolyearenabled', 'neq', 1);
+            } else {
+                error_log('failed to generate settings ui link');
             }
         }
     }
@@ -146,35 +120,19 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     public static function add_dashboard_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
         if (!empty($record)) {
-            $curl = curl_init();
-            curl_setopt_array($curl, [
-                CURLOPT_URL => get_config('quizaccess_schoolyear', 'apibaseaddress') . "/v2/exam/" . $record->get('examid') . "/ui/dashboard",
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => "POST",
-                CURLOPT_POSTFIELDS => "",
-                CURLOPT_HTTPHEADER => [
-                    "Content-Type: application/json",
-                    "X-Sy-Api: " . get_config('quizaccess_schoolyear', 'apikey')
-                ],
-            ]);
-            $response = curl_exec($curl);
-            $err = curl_error($curl);
-            curl_close($curl);
-            if ($err) {
-                error_log(print_r($err, true));
-            } else {
-                $decoded_json = json_decode($response, false);
+            $examid = $record->get('examid');
+
+            $response = self::api_request('POST', "/v2/exam/$examid/ui/dashboard");
+
+            if ($response) {
                 $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
-                $btn .= html_writer::link($decoded_json->url, 'Open dashboard', ['class' => 'btn btn-secondary', 'title' => 'Go to exam dashboard']);
+                $btn .= html_writer::link($response->url, 'Open dashboard', ['class' => 'btn btn-secondary', 'title' => 'Go to exam dashboard']);
                 $btn .= html_writer::end_tag('div');
-                $btngroup = array();
-                $btngroup[] =& $mform->createElement('html', $btn);
+                $btngroup = array($mform->createElement('html', $btn));
                 $mform->addGroup($btngroup, 'sy-dashboard-btn', 'Dashboard UI', ' ', false);
                 $mform->hideIf('sy-dashboard-btn', 'schoolyearenabled', 'neq', 1);
+            } else {
+                error_log('failed to generate dashboard ui link');
             }
         }
     }
@@ -237,37 +195,42 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     public static function create_exam($quiz) {
-        $element_id = '26ab94c0-81aa-46e9-907f-80a97a2157dc';
+        global $CFG;
+        $element_id = \core\uuid::generate();
         $json = json_encode(array(
             'display_name' => $quiz->name,
             'start_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeopen),
             'end_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeclose),
-            'expected_workspaces' => 20,
+            'expected_workspaces' => null,
             'workspace' => array(
                 'vault' => array(
                     'content' => array(
                         'elements' => array(
-                            '7cea7a20-5b8a-4d75-bd17-096492e5a460' => array(
+                            \core\uuid::generate() => array(
                                 'type' => 'web_page_entire_domain',
                                 'url_entire_domain' => array(
-                                    'url' => 'http://localhost:8888/',
+                                    'url' => $CFG->wwwroot,
                                     'require_exact_port' => false
                                 )
                             ),
                             $element_id => array(
-                                'type' => 'web_page_url',
-                                'url' => array(
-                                    'url' => 'http://localhost:8888/moodle401/mod/quiz/view.php?id=13',
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'pathname' => '/*/mod/quiz/review.php',
+                                    'search_params' => array(
+                                        'attempt' => '*',
+                                        'cmid' => $quiz->coursemodule
+                                    )
                                 )
                             )
                         ),
                         'exit_points' => array(
-                            array(array('element_id' => $element_id))
+                            array('element_id' => $element_id)
                         )
                     )
                 )
             )
-        ));
+        ), JSON_UNESCAPED_SLASHES);
 
         $exam = self::api_request("POST", "/v2/exam", $json);
 
@@ -288,11 +251,9 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             'display_name' => $quiz->name,
             'start_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeopen),
             'end_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeclose),
-            'expected_workspaces' => 20,
+            'expected_workspaces' => null,
         ));
-        error_log('json:');
-        error_log(print_r($json, true));
-        self::api_request('PATCH', '/v2/exam/' . $quiz->examid, $json, 'application/merge-patch+json');
+        self::api_request('PATCH', "/v2/exam/$quiz->examid", $json, 'application/merge-patch+json');
     }
 
     public static function delete_exam($quiz) {
