@@ -196,6 +196,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
     public static function create_exam($quiz) {
         global $CFG;
+        $root = $CFG->wwwroot;
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
             'display_name' => $quiz->name,
@@ -207,19 +208,87 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                     'content' => array(
                         'elements' => array(
                             \core\uuid::generate() => array(
-                                'type' => 'web_page_entire_domain',
-                                'url_entire_domain' => array(
-                                    'url' => $CFG->wwwroot,
-                                    'require_exact_port' => false
+                                'type' => 'web_page_url',
+                                'url' => array(
+                                    'url' => "$root"
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_url',
+                                'url' => array(
+                                    'url' => "$root/login/index.php"
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'pathname' => '*/login/index.php',
+                                    'search_params' => array(
+                                        'testsession' => '*'
+                                    )
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'pathname' => '*/lib/ajax/service.php',
+                                    'search_params' => array(
+                                        'sesskey' => '*',
+                                        'info' => '*'
+                                    )
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'pathname' => '*/mod/quiz/view.php',
+                                    'search_params' => array(
+                                        'id' => strval($quiz->id)
+                                    )
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'pathname' => '*/mod/quiz/attempt.php',
+                                    'search_params' => array(
+                                        'attempt' => '*',
+                                        'cmid' => strval($quiz->coursemodule)
+                                    )
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'pathname' => '*/mod/quiz/summary.php',
+                                    'search_params' => array(
+                                        'attempt' => '*',
+                                        'cmid' => strval($quiz->coursemodule)
+                                    )
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'pathname' => '*/mod/quiz/startattempt.php'
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'pathname' => '*/mod/quiz/processattempt.php',
+                                    'search_params' => array(
+                                        'cmid' => strval($quiz->coursemodule)
+                                    )
                                 )
                             ),
                             $element_id => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
-                                    'pathname' => '/*/mod/quiz/review.php',
+                                    'pathname' => '*/mod/quiz/review.php',
                                     'search_params' => array(
                                         'attempt' => '*',
-                                        'cmid' => $quiz->coursemodule
+                                        'cmid' => strval($quiz->coursemodule)
                                     )
                                 )
                             )
