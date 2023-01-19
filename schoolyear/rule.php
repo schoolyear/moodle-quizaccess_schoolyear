@@ -45,9 +45,23 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return false;
     }
 
+    public static function encrypt_cookie(string $input) {
+        $api_key = get_config(self::PLUGIN_NAME, 'apikey');
+        $ciphering = 'AES-128-CTR';
+        $options = 0;
+        $encryption_iv = '1234567891011121';
+        $encryption_key = $api_key;
+        return openssl_encrypt($input, $ciphering, $encryption_key, $options, $encryption_iv);
+    }
+
     public static function create_workspace($examid, $cmid) {
-        global $USER;
-        global $CFG;
+        global $USER, $CFG;
+        $syc = urlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
+        $syr = urlencode("/mod/quiz/view.php?id=$cmid");
+
+        error_log('COOKIE: '.$_COOKIE['MoodleSession'.$CFG->sessioncookie]);
+        error_log("GENERATED URL: "."$CFG->wwwroot?syc=$syc&syr=$syr");
+
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
             'personal_information' => array(
@@ -62,7 +76,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                         $element_id => array(
                             'type' => 'web_page_url',
                             'url' => array(
-                                'url' => "$CFG->wwwroot/mod/quiz/view.php?id=$cmid"
+                                'url' => "$CFG->wwwroot?syc=$syc&syr=$syr"
                             )
                         )
                     ),
@@ -208,33 +222,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                     'content' => array(
                         'elements' => array(
                             \core\uuid::generate() => array(
-                                'type' => 'web_page_url',
-                                'url' => array(
-                                    'url' => "$root"
-                                )
-                            ),
-                            \core\uuid::generate() => array(
-                                'type' => 'web_page_url',
-                                'url' => array(
-                                    'url' => "$root/login/index.php"
-                                )
-                            ),
-                            \core\uuid::generate() => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
-                                    'pathname' => '*/login/index.php',
+                                    'pathname' => '*',
                                     'search_params' => array(
-                                        'testsession' => '*'
-                                    )
-                                )
-                            ),
-                            \core\uuid::generate() => array(
-                                'type' => 'web_page_regex',
-                                'url_regex' => array(
-                                    'pathname' => '*/lib/ajax/service.php',
-                                    'search_params' => array(
-                                        'sesskey' => '*',
-                                        'info' => '*'
+                                        'syc' => '*',
+                                        'syt' => '*'
                                     )
                                 )
                             ),
