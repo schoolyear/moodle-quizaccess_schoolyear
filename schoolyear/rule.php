@@ -212,6 +212,9 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         global $CFG;
         $root = $CFG->wwwroot;
         $url = parse_url($root);
+        $protocol = $url['scheme'];
+        $hostname = $url['host'];
+        $pathname = $url['path'];
 
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
@@ -226,9 +229,9 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                             \core\uuid::generate() => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
-                                    'protocol' => $url['scheme'],
-                                    'hostname' => $url['host'],
-                                    'pathname' => $url['path'],
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
+                                    'pathname' => $pathname,
                                     'search_params' => array(
                                         'syc' => '*',
                                         'syt' => '*'
@@ -238,6 +241,8 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                             \core\uuid::generate() => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/view.php',
                                     'search_params' => array(
                                         'id' => strval($quiz->id)
@@ -247,6 +252,8 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                             \core\uuid::generate() => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/attempt.php',
                                     'search_params' => array(
                                         'attempt' => '*',
@@ -257,6 +264,8 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                             \core\uuid::generate() => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/summary.php',
                                     'search_params' => array(
                                         'attempt' => '*',
@@ -267,12 +276,16 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                             \core\uuid::generate() => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/startattempt.php'
                                 )
                             ),
                             \core\uuid::generate() => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/processattempt.php',
                                     'search_params' => array(
                                         'cmid' => strval($quiz->coursemodule)
@@ -282,6 +295,8 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                             $element_id => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/review.php',
                                     'search_params' => array(
                                         'attempt' => '*',
