@@ -197,6 +197,8 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     
     public static function save_settings($quiz) {
         if (empty($quiz->schoolyearenabled)) {
+            error_log('quiz:');
+            error_log(print_r($quiz,true));
             self::delete_exam($quiz);
         } else {
             global $DB;
@@ -329,25 +331,27 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     public static function update_exam($quiz) {
+        $record = quiz_settings::get_record(['quizid' => $quiz->id]);
+        $examid = $record->get('examid');
+
         $json = json_encode(array(
             'display_name' => $quiz->name,
             'start_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeopen),
             'end_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeclose),
-            'expected_workspaces' => null,
+            'expected_workspaces' => null
         ));
-        self::api_request('PATCH', "/v2/exam/$quiz->examid", $json, 'application/merge-patch+json');
+
+        self::api_request('PATCH', "/v2/exam/$examid", $json, 'application/merge-patch+json');
     }
 
     public static function delete_exam($quiz) {
+        $record = quiz_settings::get_record(['quizid' => $quiz->id]);
+        $examid = $record->get('examid');
+
         global $DB;
         $DB->delete_records(self::PLUGIN_NAME, array('quizid' => $quiz->id));
 
-        $response = self::api_request('PUT', '/v2/exam/examId/archive');
-        if ($response) {
-            error_log('deleted exam');
-        } else {
-            error_log('error deleting exam');
-        }
+        self::api_request('PUT', "/v2/exam/$examid/archive");
     }
 
     public static function api_request(string $method, string $path, string $data = '', $content_type = 'application/json') {
