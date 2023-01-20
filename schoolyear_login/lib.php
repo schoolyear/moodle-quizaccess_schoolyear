@@ -7,7 +7,6 @@ function local_schoolyear_login_extend_navigation(global_navigation $nav) {
     if ($PAGE->pagetype == 'site-index') {
         $query_string = $_SERVER['QUERY_STRING'];
         parse_str($query_string, $query_params);
-        error_log(print_r($query_params, true));
 
         if (!array_key_exists('syc', $query_params)) {
             return;
@@ -18,11 +17,8 @@ function local_schoolyear_login_extend_navigation(global_navigation $nav) {
         }
 
         $encoded_cookie = $query_params['syc'];
-        error_log('encoded_cookie:'.$encoded_cookie);
         $encrypted_cookie = urldecode($encoded_cookie);
-        error_log('encrypted_cookie:'.$encrypted_cookie);
         $decrypted_cookie = decrypt_cookie($encrypted_cookie);
-        error_log('decrypted_cookie:'.$decrypted_cookie);
         setcookie('MoodleSession'.$CFG->sessioncookie, $decrypted_cookie, 0, $CFG->sessioncookiepath);
 
         $encoded_url = $query_params['syr'];

@@ -211,6 +211,8 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     public static function create_exam($quiz) {
         global $CFG;
         $root = $CFG->wwwroot;
+        $url = parse_url($root);
+
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
             'display_name' => $quiz->name,
@@ -224,7 +226,9 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                             \core\uuid::generate() => array(
                                 'type' => 'web_page_regex',
                                 'url_regex' => array(
-                                    'pathname' => '*',
+                                    'protocol' => $url['scheme'],
+                                    'hostname' => $url['host'],
+                                    'pathname' => $url['path'],
                                     'search_params' => array(
                                         'syc' => '*',
                                         'syt' => '*'
