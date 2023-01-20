@@ -23,11 +23,15 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             return array($result);
         }
         else if ($result) {
+            global $PAGE;
+            $PAGE->set_pagelayout('secure');
             return false;
         }
 
         $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid);
-        return array($result);
+        return array(
+            'This quiz requires the Schoolyear application.',
+            $result);
     }
 
     public static function validate_signature() {
@@ -38,7 +42,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             if ($response) {
                 return true;
             } else {
-                return 'An error occurred while validating signature.';
+                return 'An error occurred while verifying Schoolyear browser.';
             }
         }
 
@@ -49,7 +53,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $api_key = get_config(self::PLUGIN_NAME, 'apikey');
         $ciphering = 'AES-128-CTR';
         $options = 0;
-        $encryption_iv = '1234567891011121';
+        $encryption_iv = '5943261928359572';
         $encryption_key = $api_key;
         return openssl_encrypt($input, $ciphering, $encryption_key, $options, $encryption_iv);
     }
@@ -59,9 +63,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $syc = urlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
         $syr = urlencode("/mod/quiz/view.php?id=$cmid");
 
-        error_log('COOKIE: '.$_COOKIE['MoodleSession'.$CFG->sessioncookie]);
-        error_log("GENERATED URL: "."$CFG->wwwroot?syc=$syc&syr=$syr");
-
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
             'personal_information' => array(
@@ -69,7 +70,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                 'first_name' => $USER->firstname,
                 'last_name' => $USER->lastname
             ),
-            'federated_user_id' => $USER->idnumber,
+            'federated_user_id' => $USER->id,
             'vault' => array(
                 'content' => array(
                     'elements' => array(
@@ -91,7 +92,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
         if ($response) {
             $button = html_writer::start_tag('div', array('class' => 'singlebutton'));
-            $button .= html_writer::link($response->onboarding_url, 'Start Schoolyear exam', ['class' => 'btn btn-primary', 'title' => 'Start exam']);
+            $button .= html_writer::link($response->onboarding_url, 'Start quiz', ['class' => 'btn btn-primary', 'title' => 'Start exam', 'target' => '_blank']);
             $button .= html_writer::end_tag('div');
             return $button;
         } else {
@@ -120,10 +121,10 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
             if ($response) {
                 $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
-                $btn .= html_writer::link($response->url, 'Open settings', ['class' => 'btn btn-secondary', 'title' => 'Go to exam settings']);
+                $btn .= html_writer::link($response->url, 'Open settings widget', ['class' => 'btn btn-secondary', 'title' => 'Go to exam settings', 'target' => '_blank']);
                 $btn .= html_writer::end_tag('div');
                 $btngroup = array($mform->createElement('html', $btn));
-                $mform->addGroup($btngroup, 'sy-settings-btn', 'Settings UI', ' ', false);
+                $mform->addGroup($btngroup, 'sy-settings-btn', 'Settings widget', ' ', false);
                 $mform->hideIf('sy-settings-btn', 'schoolyearenabled', 'neq', 1);
             } else {
                 error_log('failed to generate settings ui link');
@@ -140,10 +141,10 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
             if ($response) {
                 $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
-                $btn .= html_writer::link($response->url, 'Open dashboard', ['class' => 'btn btn-secondary', 'title' => 'Go to exam dashboard']);
+                $btn .= html_writer::link($response->url, 'Open dashboard', ['class' => 'btn btn-secondary', 'title' => 'Go to exam dashboard', 'target' => '_blank']);
                 $btn .= html_writer::end_tag('div');
                 $btngroup = array($mform->createElement('html', $btn));
-                $mform->addGroup($btngroup, 'sy-dashboard-btn', 'Dashboard UI', ' ', false);
+                $mform->addGroup($btngroup, 'sy-dashboard-btn', 'Dashboard', ' ', false);
                 $mform->hideIf('sy-dashboard-btn', 'schoolyearenabled', 'neq', 1);
             } else {
                 error_log('failed to generate dashboard ui link');
@@ -214,7 +215,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $url = parse_url($root);
         $protocol = $url['scheme'];
         $hostname = $url['host'];
-        $pathname = $url['path'];
+        $pathname = $url['path'] ?? '/';
 
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
@@ -245,7 +246,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                                     'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/view.php',
                                     'search_params' => array(
-                                        'id' => strval($quiz->id)
+                                        'id' => strval($quiz->coursemodule)
                                     )
                                 )
                             ),

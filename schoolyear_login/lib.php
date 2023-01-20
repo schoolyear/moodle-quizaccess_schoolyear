@@ -8,11 +8,7 @@ function local_schoolyear_login_extend_navigation(global_navigation $nav) {
         $query_string = $_SERVER['QUERY_STRING'];
         parse_str($query_string, $query_params);
 
-        if (!array_key_exists('syc', $query_params)) {
-            return;
-        }
-
-        if (!array_key_exists('syr', $query_params)) {
+        if (!array_key_exists('syc', $query_params) || !array_key_exists('syr', $query_params)) {
             return;
         }
 
@@ -32,7 +28,7 @@ function decrypt_cookie(string $input) {
     $api_key = get_config('quizaccess_schoolyear', 'apikey');
     $ciphering = 'AES-128-CTR';
     $options = 0;
-    $decryption_iv = '1234567891011121';
+    $decryption_iv = '5943261928359572';
     $decryption_key = $api_key;
     return openssl_decrypt($input, $ciphering, $decryption_key, $options, $decryption_iv);
 }
