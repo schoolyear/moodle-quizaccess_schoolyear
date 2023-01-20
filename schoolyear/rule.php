@@ -197,8 +197,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     
     public static function save_settings($quiz) {
         if (empty($quiz->schoolyearenabled)) {
-            error_log('quiz:');
-            error_log(print_r($quiz,true));
             self::delete_exam($quiz);
         } else {
             global $DB;
