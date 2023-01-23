@@ -30,7 +30,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
         $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid);
         return array(
-            'This quiz requires the Schoolyear application.',
+            get_string('requiresschoolyear', 'quizaccess_schoolyear'),
             $result);
     }
 
@@ -42,7 +42,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             if ($response) {
                 return true;
             } else {
-                return 'An error occurred while verifying Schoolyear browser.';
+                return get_string('errorverifying', 'quizaccess_schoolyear');
             }
         }
 
@@ -51,11 +51,14 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
     public static function encrypt_cookie(string $input) {
         $api_key = get_config(self::PLUGIN_NAME, 'apikey');
-        $ciphering = 'AES-128-CTR';
-        $options = 0;
-        $encryption_iv = '5943261928359572';
-        $encryption_key = $api_key;
-        return openssl_encrypt($input, $ciphering, $encryption_key, $options, $encryption_iv);
+        $key = substr(hash('sha256', $api_key, true), 0, 32);
+        $cipher = 'aes-256-gcm';
+        $iv_len = openssl_cipher_iv_length($cipher);
+        $tag_length = 16;
+        $iv = openssl_random_pseudo_bytes($iv_len);
+        $tag = "";
+        $ciphertext = openssl_encrypt($input, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, "", $tag_length);
+        return base64_encode($iv.$ciphertext.$tag);
     }
 
     public static function create_workspace($examid, $cmid) {
@@ -91,8 +94,9 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $response = self::api_request("POST", "/v2/exam/$examid/workspace", $json);
 
         if ($response) {
+            $label = get_string('startquiz', 'quizaccess_schoolyear');
             $button = html_writer::start_tag('div', array('class' => 'singlebutton'));
-            $button .= html_writer::link($response->onboarding_url, 'Start quiz', ['class' => 'btn btn-primary', 'title' => 'Start exam', 'target' => '_blank']);
+            $button .= html_writer::link($response->onboarding_url, $label, ['class' => 'btn btn-primary', 'title' => $label, 'target' => '_blank']);
             $button .= html_writer::end_tag('div');
             return $button;
         } else {
@@ -120,11 +124,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             $response = self::api_request('POST', "/v2/exam/$examid/ui/settings");
 
             if ($response) {
+                $label = get_string('opensettingswidget', 'quizaccess_schoolyear');
                 $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
-                $btn .= html_writer::link($response->url, 'Open settings widget', ['class' => 'btn btn-secondary', 'title' => 'Go to exam settings', 'target' => '_blank']);
+                $btn .= html_writer::link($response->url, $label, ['class' => 'btn btn-secondary', 'title' => $label, 'target' => '_blank']);
                 $btn .= html_writer::end_tag('div');
                 $btngroup = array($mform->createElement('html', $btn));
-                $mform->addGroup($btngroup, 'sy-settings-btn', 'Settings widget', ' ', false);
+                $mform->addGroup($btngroup, 'sy-settings-btn', get_string('settingswidget', 'quizaccess_schoolyear'), ' ', false);
                 $mform->hideIf('sy-settings-btn', 'schoolyearenabled', 'neq', 1);
             } else {
                 error_log('failed to generate settings ui link');
@@ -140,11 +145,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             $response = self::api_request('POST', "/v2/exam/$examid/ui/dashboard");
 
             if ($response) {
+                $label = get_string('opendashboard', 'quizaccess_schoolyear');
                 $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
-                $btn .= html_writer::link($response->url, 'Open dashboard', ['class' => 'btn btn-secondary', 'title' => 'Go to exam dashboard', 'target' => '_blank']);
+                $btn .= html_writer::link($response->url, $label, ['class' => 'btn btn-secondary', 'title' => $label, 'target' => '_blank']);
                 $btn .= html_writer::end_tag('div');
                 $btngroup = array($mform->createElement('html', $btn));
-                $mform->addGroup($btngroup, 'sy-dashboard-btn', 'Dashboard', ' ', false);
+                $mform->addGroup($btngroup, 'sy-dashboard-btn', get_string('dashboard', 'quizaccess_schoolyear'), ' ', false);
                 $mform->hideIf('sy-dashboard-btn', 'schoolyearenabled', 'neq', 1);
             } else {
                 error_log('failed to generate dashboard ui link');
@@ -155,7 +161,8 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     public static function add_settings_dashboard_ui_label(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
         if (empty($record)) {
-            $group = array($mform->createElement('static', 'sy-btn-label', 'alert', 'Save to access the settings and dashboard buttons for this exam.'));
+            $msg = get_string('savefirst', 'quizaccess_schoolyear');
+            $group = array($mform->createElement('static', 'sy-btn-label', 'alert', $msg));
             $mform->addGroup($group, 'sy-label-group', '', ' ', false);
             $mform->hideIf('sy-label-group', 'schoolyearenabled', 'neq', 1);
         }
@@ -168,14 +175,14 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
         if ($schoolyearenabled) {
             if ($timeopen == 0 || $timeclose == 0) {
-                $msg = 'Opening and closing time must be set for a Schoolyear exam.';
+                $msg = get_string('timingerror', 'quizaccess_schoolyear');
                 array_push($errors, $msg);
                 \core\notification::error($msg);
                 return $errors;
             }
 
             if ($timeclose-$timeopen > 86400) {
-                $msg = 'A Schoolyear exam must be a maximum of 24 hours.';
+                $msg = get_string('24herror', 'quizaccess_schoolyear');
                 array_push($errors, $msg);
                 \core\notification::error($msg);
             }

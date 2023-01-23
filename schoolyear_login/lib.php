@@ -26,9 +26,13 @@ function local_schoolyear_login_extend_navigation(global_navigation $nav) {
 
 function decrypt_cookie(string $input) {
     $api_key = get_config('quizaccess_schoolyear', 'apikey');
-    $ciphering = 'AES-128-CTR';
-    $options = 0;
-    $decryption_iv = '5943261928359572';
-    $decryption_key = $api_key;
-    return openssl_decrypt($input, $ciphering, $decryption_key, $options, $decryption_iv);
+    $encrypted = base64_decode($input);
+    $key = substr(hash('sha256', $api_key, true), 0, 32);
+    $cipher = 'aes-256-gcm';
+    $iv_len = openssl_cipher_iv_length($cipher);
+    $tag_length = 16;
+    $iv = substr($encrypted, 0, $iv_len);
+    $ciphertext = substr($encrypted, $iv_len, -$tag_length);
+    $tag = substr($encrypted, -$tag_length);
+    return openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag);
 }
