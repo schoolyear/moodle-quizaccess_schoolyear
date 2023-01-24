@@ -242,7 +242,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                                     'pathname' => $pathname,
                                     'search_params' => array(
                                         'syc' => '*',
-                                        'syt' => '*'
+                                        'syr' => '*'
                                     )
                                 )
                             ),
