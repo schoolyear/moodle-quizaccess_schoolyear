@@ -63,7 +63,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
     public static function create_workspace($examid, $cmid) {
         global $USER, $CFG;
-        $syc = urlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
+        $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
         $syr = urlencode("/mod/quiz/view.php?id=$cmid");
 
         $element_id = \core\uuid::generate();

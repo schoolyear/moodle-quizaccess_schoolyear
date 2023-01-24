@@ -13,7 +13,7 @@ function local_schoolyear_login_extend_navigation(global_navigation $nav) {
         }
 
         $encoded_cookie = $query_params['syc'];
-        $encrypted_cookie = urldecode($encoded_cookie);
+        $encrypted_cookie = rawurldecode($encoded_cookie);
         $decrypted_cookie = decrypt_cookie($encrypted_cookie);
         setcookie('MoodleSession'.$CFG->sessioncookie, $decrypted_cookie, 0, $CFG->sessioncookiepath);
 
