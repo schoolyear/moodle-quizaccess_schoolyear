@@ -201,18 +201,19 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     public static function delete_settings($quiz) {
         self::delete_exam($quiz);
     }
-    
+
     public static function save_settings($quiz) {
-        if (empty($quiz->schoolyearenabled)) {
-            self::delete_exam($quiz);
-        } else {
-            global $DB;
-            if (!$DB->record_exists(self::PLUGIN_NAME, array('quizid' => $quiz->id))) {
-                self::create_exam($quiz);
-            }
-            else {
+        global $DB;
+        $exists = $DB->record_exists(self::PLUGIN_NAME, array('quizid' => $quiz->id));
+        $empty = empty($quiz->schoolyearenabled);
+        if ($exists) {
+            if ($empty) {
+                self::delete_exam($quiz);
+            } else {
                 self::update_exam($quiz);
             }
+        } elseif (!$empty) {
+            self::create_exam($quiz);
         }
     }
 
