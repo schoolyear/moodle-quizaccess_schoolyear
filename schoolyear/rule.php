@@ -80,7 +80,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                         $element_id => array(
                             'type' => 'web_page_url',
                             'url' => array(
-                                'url' => "$CFG->wwwroot?syc=$syc&syr=$syr"
+                                'url' => "$CFG->wwwroot?noredirect=1&syc=$syc&syr=$syr"
                             )
                         )
                     ),
