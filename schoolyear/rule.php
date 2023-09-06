@@ -252,6 +252,18 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                                 'url_regex' => array(
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
+                                    'pathname' => $pathname.'/',
+                                    'search_params' => array(
+                                        'syc' => '*',
+                                        'syr' => '*'
+                                    )
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/view.php',
                                     'search_params' => array(
                                         'id' => strval($quiz->coursemodule)
@@ -299,6 +311,25 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                                     'search_params' => array(
                                         'cmid' => strval($quiz->coursemodule)
                                     )
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
+                                    'pathname' => '*/mod/quiz/processattempt.php',
+                                    'search_params' => array(
+                                        'attempt' => '*'
+                                    )
+                                )
+                            ),
+                            \core\uuid::generate() => array(
+                                'type' => 'web_page_regex',
+                                'url_regex' => array(
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
+                                    'pathname' => '*/mod/quiz/processattempt.php'
                                 )
                             ),
                             $element_id => array(
