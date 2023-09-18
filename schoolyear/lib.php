@@ -2,9 +2,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-function local_schoolyear_login_extend_navigation(global_navigation $nav) {
+function quizaccess_schoolyear_after_config() {
     global $PAGE, $CFG;
-    if ($PAGE->pagetype == 'site-index') {
+    if ($PAGE->pagetype == 'login-index') {
         $query_string = $_SERVER['QUERY_STRING'];
         parse_str($query_string, $query_params);
 

@@ -80,7 +80,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                         $element_id => array(
                             'type' => 'web_page_url',
                             'url' => array(
-                                'url' => "$CFG->wwwroot?noredirect=1&syc=$syc&syr=$syr"
+                                'url' => "$CFG->wwwroot/login/index.php?noredirect=1&syc=$syc&syr=$syr"
                             )
                         )
                     ),
@@ -223,7 +223,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $url = parse_url($root);
         $protocol = $url['scheme'];
         $hostname = $url['host'];
-        $pathname = $url['path'] ?? '/';
 
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
@@ -240,20 +239,9 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                                 'url_regex' => array(
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
-                                    'pathname' => $pathname,
+                                    'pathname' => '*/login/index.php',
                                     'search_params' => array(
-                                        'syc' => '*',
-                                        'syr' => '*'
-                                    )
-                                )
-                            ),
-                            \core\uuid::generate() => array(
-                                'type' => 'web_page_regex',
-                                'url_regex' => array(
-                                    'protocol' => $protocol,
-                                    'hostname' => $hostname,
-                                    'pathname' => $pathname.'/',
-                                    'search_params' => array(
+                                        'noredirect' => '1',
                                         'syc' => '*',
                                         'syr' => '*'
                                     )
