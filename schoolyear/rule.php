@@ -28,7 +28,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             return false;
         }
 
-        $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid);
+        global $USER;
+        if (is_null($USER->idnumber)) {
+            return array(get_string('invaliduseridnumber', 'quizaccess_schoolyear'));
+        }
+
+        $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid, $USER->idnumber);
         return array(
             get_string('requiresschoolyear', 'quizaccess_schoolyear'),
             $result);
@@ -61,7 +66,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return base64_encode($iv.$ciphertext.$tag);
     }
 
-    public static function create_workspace($examid, $cmid) {
+    public static function create_workspace($examid, $cmid, $useridnumber) {
         global $USER, $CFG;
         $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
         $syr = urlencode("/mod/quiz/view.php?id=$cmid");
@@ -69,7 +74,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
             'personal_information' => array(
-                'org_code' => $USER->idnumber,
+                'org_code' => $useridnumber,
                 'first_name' => $USER->firstname,
                 'last_name' => $USER->lastname
             ),

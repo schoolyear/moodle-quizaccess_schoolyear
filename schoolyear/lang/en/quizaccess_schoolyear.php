@@ -8,6 +8,7 @@ $string['schoolyearenabledoption'] = 'enabled';
 $string['schoolyeardisabledoption'] = 'disabled';
 $string['requiresschoolyear'] = 'This quiz requires the Schoolyear application.';
 $string['errorverifying'] = 'An error occurred while verifying Schoolyear browser.';
+$string['invaliduseridnumber'] = 'Your user ID is empty. You need a user ID to start a Schoolyear exam.';
 $string['startquiz'] = 'Start quiz';
 $string['settingswidget'] = 'Settings widget';
 $string['opensettingswidget'] = 'Open settings widget';
