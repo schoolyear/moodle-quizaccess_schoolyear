@@ -97,7 +97,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         ), JSON_UNESCAPED_SLASHES);
 
         $response = self::api_request("POST", "/v2/exam/$examid/workspace", $json);
-
         if ($response) {
             $label = get_string('startquiz', 'quizaccess_schoolyear');
             $button = html_writer::start_tag('div', array('class' => 'singlebutton'));
@@ -111,10 +110,10 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
     public static function add_settings_form_fields(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $mform->addElement('select', 'schoolyearenabled', get_string('schoolyearenabled', 'quizaccess_schoolyear'),
-                array(
-                    0 => get_string('schoolyeardisabledoption', 'quizaccess_schoolyear'),
-                    1 => get_string('schoolyearenabledoption', 'quizaccess_schoolyear'),
-                ));
+            array(
+                0 => get_string('schoolyeardisabledoption', 'quizaccess_schoolyear'),
+                1 => get_string('schoolyearenabledoption', 'quizaccess_schoolyear'),
+            ));
 
         self::add_settings_ui_button($quizform, $mform);
         self::add_dashboard_ui_button($quizform, $mform);
@@ -174,6 +173,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     public static function validate_settings_form_fields(array $errors, array $data, $files, mod_quiz_mod_form $quizform) {
+        $name = $data['name'];
         $timeopen = $data['timeopen'];
         $timeclose = $data['timeclose'];
         $schoolyearenabled = $data['schoolyearenabled'];
@@ -190,12 +190,34 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                 $msg = get_string('24herror', 'quizaccess_schoolyear');
                 array_push($errors, $msg);
                 \core\notification::error($msg);
+                return $errors;
+            }
+
+            // update if needed
+            $current = $quizform->get_current();
+            $quiz = new stdClass();
+            $quiz->id = $current->id;
+            $quiz->name = $name;
+            $quiz->timeopen = $timeopen;
+            $quiz->timeclose = $timeclose;
+
+            global $DB;
+            $exists = $DB->record_exists(self::PLUGIN_NAME, array('quizid' => $quiz->id));
+            if ($exists) {
+                try {
+                    self::update_exam($quiz);
+                } catch (Exception $e) {
+                    $msg = $e->getMessage();
+                    array_push($errors, $msg);
+                    \core\notification::error($msg);
+                    return $errors;
+                }
             }
         }
 
         return $errors;
     }
-    
+
     public static function get_settings_sql($quizid) {
         return array(
             'schoolyearenabled, examid',
@@ -211,14 +233,19 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         global $DB;
         $exists = $DB->record_exists(self::PLUGIN_NAME, array('quizid' => $quiz->id));
         $empty = empty($quiz->schoolyearenabled);
-        if ($exists) {
-            if ($empty) {
-                self::delete_exam($quiz);
-            } else {
-                self::update_exam($quiz);
+
+        if (!$exists && !$empty) {
+            try {
+                self::create_exam($quiz);
+            } catch (Exception $e) {
+                \core\notification::error('Failed to create Schoolyear exam. '.$e->getMessage());
             }
-        } elseif (!$empty) {
-            self::create_exam($quiz);
+            return;
+        }
+
+        if ($exists && $empty) {
+            self::delete_exam($quiz);
+            return;
         }
     }
 
@@ -346,17 +373,17 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             )
         ), JSON_UNESCAPED_SLASHES);
 
-        $exam = self::api_request("POST", "/v2/exam", $json);
+        $result = self::api_request("POST", "/v2/exam", $json);
 
-        if ($exam) {
+        if ($result) {
             global $DB;
             $record = new stdClass();
             $record->quizid = $quiz->id;
             $record->schoolyearenabled = 1;
-            $record->examid = $exam->id;
+            $record->examid = $result->id;
             $DB->insert_record(self::PLUGIN_NAME, $record);
         } else {
-            error_log('error creating exam');
+            throw new Exception('Failed to create Schoolyear exam.');
         }
     }
 
@@ -403,17 +430,37 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             ),
         );
 
-        $curl = curl_init();
-        curl_setopt_array($curl, $request_options);
+        $ch = curl_init();
+        curl_setopt_array($ch, $request_options);
 
-        $json = curl_exec($curl);
-        $err = curl_error($curl);
-        curl_close($curl);
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        $statuscode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
         if ($err) {
-            return null;
+            throw new Exception('An error occurred while invoking the Schoolyear API.');
         }
 
-        return json_decode($json);
+        $json = json_decode($res);
+
+        if ($statuscode >= 400) {
+            $msg = 'Schoolyear API error (status: '.$statuscode;
+
+            if (!is_null($res) && is_string($res)) {
+
+                if (!is_null($json->message)) {
+                    $msg .= ', message: '.$json->message;
+                }
+                if (!is_null($json->reason)) {
+                    $msg .= ', reason: '.$json->reason;
+                }
+            }
+
+            $msg .= ')';
+            throw new Exception($msg);
+        }
+
+        return $json;
     }
 }
