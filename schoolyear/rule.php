@@ -383,7 +383,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             $record->examid = $result->id;
             $DB->insert_record(self::PLUGIN_NAME, $record);
         } else {
-            throw new Exception('Failed to create Schoolyear exam.');
+            throw new Exception('Exam ID is not present.');
         }
     }
 
