@@ -1,4 +1,4 @@
-.idea/
+/.idea/
+.phpstorm.*
 .DS_Store
-schoolyear.zip
-schoolyear_login.zip
+/.vscode/
