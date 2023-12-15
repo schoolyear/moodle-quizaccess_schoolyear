@@ -27,20 +27,21 @@ defined('MOODLE_INTERNAL') || die();
 function quizaccess_schoolyear_after_config() {
     global $PAGE, $CFG;
     if ($PAGE->pagetype == 'login-index') {
-        $query_string = $_SERVER['QUERY_STRING'];
-        parse_str($query_string, $query_params);
-
-        if (!array_key_exists('syc', $query_params) || !array_key_exists('syr', $query_params)) {
+        $syc = optional_param('syc', '', PARAM_TEXT);
+        if (empty($syc)) {
             return;
         }
 
-        $encoded_cookie = $query_params['syc'];
-        $encrypted_cookie = rawurldecode($encoded_cookie);
+        $syr = optional_param('syr', '', PARAM_TEXT);
+        if (empty($syr)) {
+            return;
+        }
+
+        $encrypted_cookie = rawurldecode($syc);
         $decrypted_cookie = decrypt_cookie($encrypted_cookie);
         setcookie('MoodleSession'.$CFG->sessioncookie, $decrypted_cookie, 0, $CFG->sessioncookiepath);
 
-        $encoded_url = $query_params['syr'];
-        $decoded_url = urldecode($encoded_url);
+        $decoded_url = urldecode($syr);
         header('Location: '.$CFG->sessioncookiepath.ltrim($decoded_url, '/'));
         die();
     }
