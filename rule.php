@@ -92,7 +92,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     public static function create_workspace($examid, $cmid, $useridnumber) {
         global $USER, $CFG;
         $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
-        $syr = urlencode("/mod/quiz/view.php?id=$cmid");
+        $syr = urlencode("$CFG->wwwroot/mod/quiz/view.php?id=$cmid");
 
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
@@ -440,31 +440,21 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
         $request_options = array(
             CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_URL => $api_base_address . $path,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 30,
             CURLOPT_ENCODING => "",
-            CURLOPT_POSTFIELDS => $data,
             CURLOPT_HTTPHEADER => array(
                 "Content-Type: " . $content_type,
                 "X-Sy-Api: " . $api_key
             ),
         );
 
-        $ch = curl_init();
-        curl_setopt_array($ch, $request_options);
+        $curl = new curl();
+        $res = $curl->post($api_base_address . $path, $data, $request_options);
 
-        $res = curl_exec($ch);
-        $err = curl_error($ch);
-        $statuscode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($err) {
+        if ($curl->get_errno()) {
             throw new Exception('An error occurred while invoking the Schoolyear API.');
         }
 
+        $statuscode = $curl->get_info()['http_code'];
         $json = json_decode($res);
 
         if ($statuscode >= 400) {
