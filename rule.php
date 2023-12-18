@@ -92,7 +92,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     public static function create_workspace($examid, $cmid, $useridnumber) {
         global $USER, $CFG;
         $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
-        $syr = urlencode("$CFG->wwwroot/mod/quiz/view.php?id=$cmid");
+        $syr = urlencode("/mod/quiz/view.php?id=$cmid");
 
         $element_id = \core\uuid::generate();
         $json = json_encode(array(
@@ -439,9 +439,9 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $api_key = get_config(self::PLUGIN_NAME, 'apikey');
 
         $request_options = array(
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_ENCODING => "",
-            CURLOPT_HTTPHEADER => array(
+            'CURLOPT_HTTP_VERSION' => 'CURL_HTTP_VERSION_1_1',
+            'CURLOPT_ENCODING' => "",
+            'CURLOPT_HTTPHEADER' => array(
                 "Content-Type: " . $content_type,
                 "X-Sy-Api: " . $api_key
             ),
