@@ -22,8 +22,22 @@
  */
 namespace quizaccess_schoolyear\privacy;
 
-class provider implements \core_privacy\local\metadata\null_provider {
-    public static function get_reason() : string {
-        return 'privacy:metadata';
+use core_privacy\local\metadata\collection;
+
+class provider implements
+    \core_privacy\local\metadata\provider {
+
+    public static function get_metadata(collection $items) : collection {
+        $items->add_external_location_link(
+            'schoolyear',
+            [
+                'userid' => 'privacy:metadata:schoolyear:userid',
+                'idnumber' => 'privacy:metadata:schoolyear:idnumber',
+                'firstname' => 'privacy:metadata:schoolyear:fullname',
+                'lastname' => 'privacy:metadata:schoolyear:fullname',
+            ],
+            'privacy:metadata:schoolyear');
+
+        return $items;
     }
 }
