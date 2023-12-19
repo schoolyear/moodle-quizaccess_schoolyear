@@ -30,18 +30,18 @@ class quiz_settings extends \core\persistent {
 
     protected static function define_properties() : array {
         return [
-            'quizid' => array(
+            'quizid' => [
                 'type' => PARAM_INT,
-            ),
-            'schoolyearenabled' => array(
+            ],
+            'schoolyearenabled' => [
                 'type' => PARAM_INT,
                 'default' => 0,
-            ),
-            'examid' => array(
+            ],
+            'examid' => [
                 'type' => PARAM_TEXT,
                 'default' => '',
                 'null' => NULL_ALLOWED,
-            ),
+            ],
         ];
     }
 }

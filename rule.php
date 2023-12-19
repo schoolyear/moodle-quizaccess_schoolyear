@@ -78,14 +78,14 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     public static function encrypt_cookie(string $input) {
-        $apiKey = get_config(self::PLUGIN_NAME, 'apikey');
-        $key = substr(hash('sha256', $apiKey, true), 0, 32);
+        $apikey = get_config(self::PLUGIN_NAME, 'apikey');
+        $key = substr(hash('sha256', $apikey, true), 0, 32);
         $cipher = 'aes-256-gcm';
-        $ivLen = openssl_cipher_iv_length($cipher);
-        $tagLen = 16;
-        $iv = openssl_random_pseudo_bytes($ivLen);
+        $ivlen = openssl_cipher_iv_length($cipher);
+        $taglen = 16;
+        $iv = openssl_random_pseudo_bytes($ivlen);
         $tag = "";
-        $ciphertext = openssl_encrypt($input, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, "", $tagLen);
+        $ciphertext = openssl_encrypt($input, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, "", $taglen);
         return base64_encode($iv.$ciphertext.$tag);
     }
 
@@ -94,7 +94,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
         $syr = urlencode("/mod/quiz/view.php?id=$cmid");
 
-        $elementId = \core\uuid::generate();
+        $elementid = \core\uuid::generate();
         $json = json_encode([
             'personal_information' => [
                 'org_code' => $useridnumber,
@@ -105,7 +105,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             'vault' => [
                 'content' => [
                     'elements' => [
-                        $elementId => [
+                        $elementid => [
                             'type' => 'web_page_url',
                             'url' => [
                                 'url' => "$CFG->wwwroot/login/index.php?noredirect=1&syc=$syc&syr=$syr",
@@ -113,7 +113,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                         ],
                     ],
                     'entry_points' => [
-                        ['element_id' => $elementId],
+                        ['element_id' => $elementid],
                     ],
                 ],
             ],
@@ -158,7 +158,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                 $btn .= html_writer::link($response->url, $label, [
                     'class' => 'btn btn-secondary',
                     'title' => $label,
-                    'target' => '_blank'
+                    'target' => '_blank',
                 ]);
                 $btn .= html_writer::end_tag('div');
                 $btngroup = [$mform->createElement('html', $btn)];
@@ -181,7 +181,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                 $btn .= html_writer::link($response->url, $label, [
                     'class' => 'btn btn-secondary',
                     'title' => $label,
-                    'target' => '_blank'
+                    'target' => '_blank',
                 ]);
                 $btn .= html_writer::end_tag('div');
                 $btngroup = [$mform->createElement('html', $btn)];
@@ -286,7 +286,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $protocol = $url['scheme'];
         $hostname = $url['host'];
 
-        $elementId = \core\uuid::generate();
+        $elementid = \core\uuid::generate();
         $json = json_encode([
             'display_name' => $quiz->name,
             'start_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeopen),
@@ -382,7 +382,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                                     'pathname' => '*/mod/quiz/processattempt.php',
                                 ],
                             ],
-                            $elementId => [
+                            $elementid => [
                                 'type' => 'web_page_regex',
                                 'url_regex' => [
                                     'protocol' => $protocol,
@@ -396,7 +396,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                             ],
                         ],
                         'exit_points' => [
-                            ['element_id' => $elementId],
+                            ['element_id' => $elementid],
                         ],
                     ],
                 ],
@@ -441,21 +441,21 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         self::api_request('PUT', "/v2/exam/$examid/archive");
     }
 
-    public static function api_request(string $method, string $path, string $data = '', $content_type = 'application/json') {
-        $apiBaseAddress = get_config(self::PLUGIN_NAME, 'apibaseaddress');
-        $apiKey = get_config(self::PLUGIN_NAME, 'apikey');
+    public static function api_request(string $method, string $path, string $data = '', $contenttype = 'application/json') {
+        $apibaseaddress = get_config(self::PLUGIN_NAME, 'apibaseaddress');
+        $apikey = get_config(self::PLUGIN_NAME, 'apikey');
 
-        $requestOptions = [
+        $options = [
             'CURLOPT_HTTP_VERSION' => 'CURL_HTTP_VERSION_1_1',
             'CURLOPT_ENCODING' => "",
             'CURLOPT_HTTPHEADER' => [
-                "Content-Type: " . $content_type,
-                "X-Sy-Api: " . $apiKey,
+                "Content-Type: " . $contenttype,
+                "X-Sy-Api: " . $apikey,
             ],
         ];
 
         $curl = new curl();
-        $res = $curl->post($apiBaseAddress . $path, $data, $requestOptions);
+        $res = $curl->post($apibaseaddress . $path, $data, $options);
 
         if ($curl->get_errno()) {
             throw new Exception('An error occurred while invoking the Schoolyear API.');

@@ -35,25 +35,25 @@ function quizaccess_schoolyear_after_config() {
             return;
         }
 
-        $encryptedCookie = rawurldecode($syc);
-        $decryptedCookie = decrypt_cookie($encryptedCookie);
-        setcookie('MoodleSession'.$CFG->sessioncookie, $decryptedCookie, 0, $CFG->sessioncookiepath);
+        $encryptedcookie = rawurldecode($syc);
+        $decryptedcookie = decrypt_cookie($encryptedcookie);
+        setcookie('MoodleSession'.$CFG->sessioncookie, $decryptedcookie, 0, $CFG->sessioncookiepath);
 
-        $decodedUrl = urldecode($syr);
-        header('Location: '.$CFG->sessioncookiepath.ltrim($decodedUrl, '/'));
+        $decodedurl = urldecode($syr);
+        header('Location: '.$CFG->sessioncookiepath.ltrim($decodedurl, '/'));
         die();
     }
 }
 
 function decrypt_cookie(string $input) {
-    $apiKey = get_config('quizaccess_schoolyear', 'apikey');
+    $apikey = get_config('quizaccess_schoolyear', 'apikey');
     $encrypted = base64_decode($input);
-    $key = substr(hash('sha256', $apiKey, true), 0, 32);
+    $key = substr(hash('sha256', $apikey, true), 0, 32);
     $cipher = 'aes-256-gcm';
-    $ivLen = openssl_cipher_iv_length($cipher);
-    $tagLen = 16;
-    $iv = substr($encrypted, 0, $ivLen);
-    $ciphertext = substr($encrypted, $ivLen, -$tagLen);
-    $tag = substr($encrypted, -$tagLen);
+    $ivlen = openssl_cipher_iv_length($cipher);
+    $taglen = 16;
+    $iv = substr($encrypted, 0, $ivlen);
+    $ciphertext = substr($encrypted, $ivlen, -$taglen);
+    $tag = substr($encrypted, -$taglen);
     return openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag);
 }
