@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - https://moodle.org/
+// This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -8,11 +8,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle. If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * Implementaton of the quizaccess_schoolyear plugin.
@@ -43,9 +43,8 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     public function prevent_access() {
         $result = self::validate_signature();
         if (is_string($result)) {
-            return array($result);
-        }
-        else if ($result) {
+            return [$result];
+        } else if ($result) {
             global $PAGE;
             $PAGE->set_pagelayout('secure');
             return false;
@@ -53,18 +52,19 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
         global $USER;
         if (is_null($USER->idnumber)) {
-            return array(get_string('invaliduseridnumber', 'quizaccess_schoolyear'));
+            return [get_string('invaliduseridnumber', 'quizaccess_schoolyear')];
         }
 
         $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid, $USER->idnumber);
-        return array(
+        return [
             get_string('requiresschoolyear', 'quizaccess_schoolyear'),
-            $result);
+            $result,
+        ];
     }
 
     public static function validate_signature() {
         if (isset($_SERVER[self::X_SY_SIGNATURE_HEADER])) {
-            $json = json_encode(array('x_sy_signature' => trim($_SERVER[self::X_SY_SIGNATURE_HEADER])));
+            $json = json_encode(['x_sy_signature' => trim($_SERVER[self::X_SY_SIGNATURE_HEADER])]);
             $response = self::api_request('POST', '/v2/signature/validate', $json);
 
             if ($response) {
@@ -78,14 +78,14 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     public static function encrypt_cookie(string $input) {
-        $api_key = get_config(self::PLUGIN_NAME, 'apikey');
-        $key = substr(hash('sha256', $api_key, true), 0, 32);
+        $apiKey = get_config(self::PLUGIN_NAME, 'apikey');
+        $key = substr(hash('sha256', $apiKey, true), 0, 32);
         $cipher = 'aes-256-gcm';
-        $iv_len = openssl_cipher_iv_length($cipher);
-        $tag_length = 16;
-        $iv = openssl_random_pseudo_bytes($iv_len);
+        $ivLen = openssl_cipher_iv_length($cipher);
+        $tagLen = 16;
+        $iv = openssl_random_pseudo_bytes($ivLen);
         $tag = "";
-        $ciphertext = openssl_encrypt($input, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, "", $tag_length);
+        $ciphertext = openssl_encrypt($input, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, "", $tagLen);
         return base64_encode($iv.$ciphertext.$tag);
     }
 
@@ -94,49 +94,51 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
         $syr = urlencode("/mod/quiz/view.php?id=$cmid");
 
-        $element_id = \core\uuid::generate();
-        $json = json_encode(array(
-            'personal_information' => array(
+        $elementId = \core\uuid::generate();
+        $json = json_encode([
+            'personal_information' => [
                 'org_code' => $useridnumber,
                 'first_name' => $USER->firstname,
-                'last_name' => $USER->lastname
-            ),
+                'last_name' => $USER->lastname,
+            ],
             'federated_user_id' => $USER->id,
-            'vault' => array(
-                'content' => array(
-                    'elements' => array(
-                        $element_id => array(
+            'vault' => [
+                'content' => [
+                    'elements' => [
+                        $elementId => [
                             'type' => 'web_page_url',
-                            'url' => array(
-                                'url' => "$CFG->wwwroot/login/index.php?noredirect=1&syc=$syc&syr=$syr"
-                            )
-                        )
-                    ),
-                    'entry_points' => array(
-                        array('element_id' => $element_id)
-                    )
-                )
-            )
-        ), JSON_UNESCAPED_SLASHES);
+                            'url' => [
+                                'url' => "$CFG->wwwroot/login/index.php?noredirect=1&syc=$syc&syr=$syr",
+                            ],
+                        ],
+                    ],
+                    'entry_points' => [
+                        ['element_id' => $elementId],
+                    ],
+                ],
+            ],
+        ], JSON_UNESCAPED_SLASHES);
 
         $response = self::api_request("POST", "/v2/exam/$examid/workspace", $json);
         if ($response) {
             $label = get_string('startquiz', 'quizaccess_schoolyear');
-            $button = html_writer::start_tag('div', array('class' => 'singlebutton'));
-            $button .= html_writer::link($response->onboarding_url, $label, ['class' => 'btn btn-primary', 'title' => $label, 'target' => '_blank']);
+            $button = html_writer::start_tag('div', ['class' => 'singlebutton']);
+            $button .= html_writer::link($response->onboarding_url, $label, [
+                'class' => 'btn btn-primary',
+                'title' => $label,
+                'target' => '_blank',
+            ]);
             $button .= html_writer::end_tag('div');
             return $button;
-        } else {
-            error_log('error creating workspace');
         }
     }
 
     public static function add_settings_form_fields(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $mform->addElement('select', 'schoolyearenabled', get_string('schoolyearenabled', 'quizaccess_schoolyear'),
-            array(
+            [
                 0 => get_string('schoolyeardisabledoption', 'quizaccess_schoolyear'),
                 1 => get_string('schoolyearenabledoption', 'quizaccess_schoolyear'),
-            ));
+            ]);
 
         self::add_settings_ui_button($quizform, $mform);
         self::add_dashboard_ui_button($quizform, $mform);
@@ -152,14 +154,16 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
             if ($response) {
                 $label = get_string('opensettingswidget', 'quizaccess_schoolyear');
-                $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
-                $btn .= html_writer::link($response->url, $label, ['class' => 'btn btn-secondary', 'title' => $label, 'target' => '_blank']);
+                $btn = html_writer::start_tag('div', ['class' => 'singlebutton']);
+                $btn .= html_writer::link($response->url, $label, [
+                    'class' => 'btn btn-secondary',
+                    'title' => $label,
+                    'target' => '_blank'
+                ]);
                 $btn .= html_writer::end_tag('div');
-                $btngroup = array($mform->createElement('html', $btn));
+                $btngroup = [$mform->createElement('html', $btn)];
                 $mform->addGroup($btngroup, 'sy-settings-btn', get_string('settingswidget', 'quizaccess_schoolyear'), ' ', false);
                 $mform->hideIf('sy-settings-btn', 'schoolyearenabled', 'neq', 1);
-            } else {
-                error_log('failed to generate settings ui link');
             }
         }
     }
@@ -173,14 +177,16 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
             if ($response) {
                 $label = get_string('opendashboard', 'quizaccess_schoolyear');
-                $btn = html_writer::start_tag('div', array('class' => 'singlebutton'));
-                $btn .= html_writer::link($response->url, $label, ['class' => 'btn btn-secondary', 'title' => $label, 'target' => '_blank']);
+                $btn = html_writer::start_tag('div', ['class' => 'singlebutton']);
+                $btn .= html_writer::link($response->url, $label, [
+                    'class' => 'btn btn-secondary',
+                    'title' => $label,
+                    'target' => '_blank'
+                ]);
                 $btn .= html_writer::end_tag('div');
-                $btngroup = array($mform->createElement('html', $btn));
+                $btngroup = [$mform->createElement('html', $btn)];
                 $mform->addGroup($btngroup, 'sy-dashboard-btn', get_string('dashboard', 'quizaccess_schoolyear'), ' ', false);
                 $mform->hideIf('sy-dashboard-btn', 'schoolyearenabled', 'neq', 1);
-            } else {
-                error_log('failed to generate dashboard ui link');
             }
         }
     }
@@ -189,7 +195,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
         if (empty($record)) {
             $msg = get_string('savefirst', 'quizaccess_schoolyear');
-            $group = array($mform->createElement('static', 'sy-btn-label', 'alert', $msg));
+            $group = [$mform->createElement('static', 'sy-btn-label', 'alert', $msg)];
             $mform->addGroup($group, 'sy-label-group', '', ' ', false);
             $mform->hideIf('sy-label-group', 'schoolyearenabled', 'neq', 1);
         }
@@ -209,14 +215,14 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                 return $errors;
             }
 
-            if ($timeclose-$timeopen > 86400) {
+            if ($timeclose - $timeopen > 86400) {
                 $msg = get_string('24herror', 'quizaccess_schoolyear');
                 array_push($errors, $msg);
                 \core\notification::error($msg);
                 return $errors;
             }
 
-            // update if needed
+            // Update if needed.
             $current = $quizform->get_current();
             $quiz = new stdClass();
             $quiz->id = $current->id;
@@ -225,7 +231,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             $quiz->timeclose = $timeclose;
 
             global $DB;
-            $exists = $DB->record_exists(self::PLUGIN_NAME, array('quizid' => $quiz->id));
+            $exists = $DB->record_exists(self::PLUGIN_NAME, ['quizid' => $quiz->id]);
             if ($exists) {
                 try {
                     self::update_exam($quiz);
@@ -242,10 +248,11 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     public static function get_settings_sql($quizid) {
-        return array(
+        return [
             'schoolyearenabled, examid',
             'LEFT JOIN {quizaccess_schoolyear} schoolyear ON schoolyear.quizid = quiz.id',
-            array());
+            [],
+        ];
     }
 
     public static function delete_settings($quiz) {
@@ -254,7 +261,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
     public static function save_settings($quiz) {
         global $DB;
-        $exists = $DB->record_exists(self::PLUGIN_NAME, array('quizid' => $quiz->id));
+        $exists = $DB->record_exists(self::PLUGIN_NAME, ['quizid' => $quiz->id]);
         $empty = empty($quiz->schoolyearenabled);
 
         if (!$exists && !$empty) {
@@ -279,122 +286,122 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $protocol = $url['scheme'];
         $hostname = $url['host'];
 
-        $element_id = \core\uuid::generate();
-        $json = json_encode(array(
+        $elementId = \core\uuid::generate();
+        $json = json_encode([
             'display_name' => $quiz->name,
             'start_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeopen),
             'end_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeclose),
             'expected_workspaces' => null,
-            'workspace' => array(
-                'vault' => array(
-                    'content' => array(
-                        'elements' => array(
-                            \core\uuid::generate() => array(
+            'workspace' => [
+                'vault' => [
+                    'content' => [
+                        'elements' => [
+                            \core\uuid::generate() => [
                                 'type' => 'web_page_regex',
-                                'url_regex' => array(
+                                'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
                                     'pathname' => '*/login/index.php',
-                                    'search_params' => array(
+                                    'search_params' => [
                                         'noredirect' => '1',
                                         'syc' => '*',
-                                        'syr' => '*'
-                                    )
-                                )
-                            ),
-                            \core\uuid::generate() => array(
+                                        'syr' => '*',
+                                    ],
+                                ],
+                            ],
+                            \core\uuid::generate() => [
                                 'type' => 'web_page_regex',
-                                'url_regex' => array(
+                                'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/view.php',
-                                    'search_params' => array(
-                                        'id' => strval($quiz->coursemodule)
-                                    )
-                                )
-                            ),
-                            \core\uuid::generate() => array(
+                                    'search_params' => [
+                                        'id' => strval($quiz->coursemodule),
+                                    ],
+                                ],
+                            ],
+                            \core\uuid::generate() => [
                                 'type' => 'web_page_regex',
-                                'url_regex' => array(
+                                'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/attempt.php',
-                                    'search_params' => array(
+                                    'search_params' => [
                                         'attempt' => '*',
-                                        'cmid' => strval($quiz->coursemodule)
-                                    )
-                                )
-                            ),
-                            \core\uuid::generate() => array(
+                                        'cmid' => strval($quiz->coursemodule),
+                                    ],
+                                ],
+                            ],
+                            \core\uuid::generate() => [
                                 'type' => 'web_page_regex',
-                                'url_regex' => array(
+                                'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/summary.php',
-                                    'search_params' => array(
+                                    'search_params' => [
                                         'attempt' => '*',
-                                        'cmid' => strval($quiz->coursemodule)
-                                    )
-                                )
-                            ),
-                            \core\uuid::generate() => array(
+                                        'cmid' => strval($quiz->coursemodule),
+                                    ],
+                                ],
+                            ],
+                            \core\uuid::generate() => [
                                 'type' => 'web_page_regex',
-                                'url_regex' => array(
+                                'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
-                                    'pathname' => '*/mod/quiz/startattempt.php'
-                                )
-                            ),
-                            \core\uuid::generate() => array(
+                                    'pathname' => '*/mod/quiz/startattempt.php',
+                                ],
+                            ],
+                            \core\uuid::generate() => [
                                 'type' => 'web_page_regex',
-                                'url_regex' => array(
-                                    'protocol' => $protocol,
-                                    'hostname' => $hostname,
-                                    'pathname' => '*/mod/quiz/processattempt.php',
-                                    'search_params' => array(
-                                        'cmid' => strval($quiz->coursemodule)
-                                    )
-                                )
-                            ),
-                            \core\uuid::generate() => array(
-                                'type' => 'web_page_regex',
-                                'url_regex' => array(
+                                'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/processattempt.php',
-                                    'search_params' => array(
-                                        'attempt' => '*'
-                                    )
-                                )
-                            ),
-                            \core\uuid::generate() => array(
+                                    'search_params' => [
+                                        'cmid' => strval($quiz->coursemodule),
+                                    ],
+                                ],
+                            ],
+                            \core\uuid::generate() => [
                                 'type' => 'web_page_regex',
-                                'url_regex' => array(
+                                'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
-                                    'pathname' => '*/mod/quiz/processattempt.php'
-                                )
-                            ),
-                            $element_id => array(
+                                    'pathname' => '*/mod/quiz/processattempt.php',
+                                    'search_params' => [
+                                        'attempt' => '*',
+                                    ],
+                                ],
+                            ],
+                            \core\uuid::generate() => [
                                 'type' => 'web_page_regex',
-                                'url_regex' => array(
+                                'url_regex' => [
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
+                                    'pathname' => '*/mod/quiz/processattempt.php',
+                                ],
+                            ],
+                            $elementId => [
+                                'type' => 'web_page_regex',
+                                'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
                                     'pathname' => '*/mod/quiz/review.php',
-                                    'search_params' => array(
+                                    'search_params' => [
                                         'attempt' => '*',
-                                        'cmid' => strval($quiz->coursemodule)
-                                    )
-                                )
-                            )
-                        ),
-                        'exit_points' => array(
-                            array('element_id' => $element_id)
-                        )
-                    )
-                )
-            )
-        ), JSON_UNESCAPED_SLASHES);
+                                        'cmid' => strval($quiz->coursemodule),
+                                    ],
+                                ],
+                            ],
+                        ],
+                        'exit_points' => [
+                            ['element_id' => $elementId],
+                        ],
+                    ],
+                ],
+            ],
+        ], JSON_UNESCAPED_SLASHES);
 
         $result = self::api_request("POST", "/v2/exam", $json);
 
@@ -414,12 +421,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $record = quiz_settings::get_record(['quizid' => $quiz->id]);
         $examid = $record->get('examid');
 
-        $json = json_encode(array(
+        $json = json_encode([
             'display_name' => $quiz->name,
             'start_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeopen),
             'end_time' => gmdate('Y-m-d\TH:i:s\Z', $quiz->timeclose),
-            'expected_workspaces' => null
-        ));
+            'expected_workspaces' => null,
+        ]);
 
         self::api_request('PATCH', "/v2/exam/$examid", $json, 'application/merge-patch+json');
     }
@@ -429,26 +436,26 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $examid = $record->get('examid');
 
         global $DB;
-        $DB->delete_records(self::PLUGIN_NAME, array('quizid' => $quiz->id));
+        $DB->delete_records(self::PLUGIN_NAME, ['quizid' => $quiz->id]);
 
         self::api_request('PUT', "/v2/exam/$examid/archive");
     }
 
     public static function api_request(string $method, string $path, string $data = '', $content_type = 'application/json') {
-        $api_base_address = get_config(self::PLUGIN_NAME, 'apibaseaddress');
-        $api_key = get_config(self::PLUGIN_NAME, 'apikey');
+        $apiBaseAddress = get_config(self::PLUGIN_NAME, 'apibaseaddress');
+        $apiKey = get_config(self::PLUGIN_NAME, 'apikey');
 
-        $request_options = array(
+        $requestOptions = [
             'CURLOPT_HTTP_VERSION' => 'CURL_HTTP_VERSION_1_1',
             'CURLOPT_ENCODING' => "",
-            'CURLOPT_HTTPHEADER' => array(
+            'CURLOPT_HTTPHEADER' => [
                 "Content-Type: " . $content_type,
-                "X-Sy-Api: " . $api_key
-            ),
-        );
+                "X-Sy-Api: " . $apiKey,
+            ],
+        ];
 
         $curl = new curl();
-        $res = $curl->post($api_base_address . $path, $data, $request_options);
+        $res = $curl->post($apiBaseAddress . $path, $data, $requestOptions);
 
         if ($curl->get_errno()) {
             throw new Exception('An error occurred while invoking the Schoolyear API.');
