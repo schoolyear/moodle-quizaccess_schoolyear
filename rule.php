@@ -394,6 +394,14 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                                     ],
                                 ],
                             ],
+                            \core\uuid::generate() => [
+                                'type' => 'web_page_regex',
+                                'url_regex' => [
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
+                                    'pathname' => '*/draftfile.php/*/user/draft/*/*.*',
+                                ],
+                            ],
                         ],
                         'exit_points' => [
                             ['element_id' => $elementid],
