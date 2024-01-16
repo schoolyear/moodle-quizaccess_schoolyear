@@ -399,7 +399,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                                 'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
-                                    'pathname' => '*/draftfile.php/*/user/draft/*/*.*',
+                                    'pathname' => '*/draftfile.php/*/user/draft/*.*',
                                 ],
                             ],
                             \core\uuid::generate() => [
@@ -407,7 +407,15 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                                 'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
-                                    'pathname' => '*/pluginfile.php/*/question/questiontext/*/*/*/*.*',
+                                    'pathname' => '*/pluginfile.php/*/question/questiontext/*.*',
+                                ],
+                            ],
+                            \core\uuid::generate() => [
+                                'type' => 'web_page_regex',
+                                'url_regex' => [
+                                    'protocol' => $protocol,
+                                    'hostname' => $hostname,
+                                    'pathname' => '*/pluginfile.php/*/mod_quiz/intro/*.*',
                                 ],
                             ],
                         ],
