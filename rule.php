@@ -215,13 +215,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
                 return $errors;
             }
 
-            if ($timeclose - $timeopen > 86400) {
-                $msg = get_string('24herror', 'quizaccess_schoolyear');
-                array_push($errors, $msg);
-                \core\notification::error($msg);
-                return $errors;
-            }
-
             // Update if needed.
             $current = $quizform->get_current();
             $quiz = new stdClass();

@@ -38,7 +38,6 @@ $string['dashboard'] = 'Dashboard';
 $string['opendashboard'] = 'Open dashboard';
 $string['savefirst'] = 'Save to access the settings and dashboard buttons for this exam.';
 $string['timingerror'] = 'Opening and closing time must be set for a Schoolyear exam.';
-$string['24herror'] = 'A Schoolyear exam must be a maximum of 24 hours.';
 $string['apibaseaddress'] = 'Schoolyear API base address';
 $string['apikey'] = 'Schoolyear API key';
 $string['privacy:metadata:schoolyear'] = 'In order to integrate with Schoolyear, user data needs to be exchanged with Schoolyear services.';
