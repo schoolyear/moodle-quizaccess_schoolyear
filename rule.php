@@ -27,9 +27,15 @@ defined('MOODLE_INTERNAL') || die();
 use quizaccess_schoolyear\quiz_settings;
 require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
 
+/**
+ * Implementaton of the quizaccess_schoolyear plugin.
+ */
 class quizaccess_schoolyear extends quiz_access_rule_base {
 
+    /** Name of the plugin. */
     private const PLUGIN_NAME = 'quizaccess_schoolyear';
+
+    /** Name of the HTTP header to validate signatures. */
     private const X_SY_SIGNATURE_HEADER = 'HTTP_X_SY_SIGNATURE';
 
     public static function make(quiz $quizobj, $timenow, $canignoretimelimits) {

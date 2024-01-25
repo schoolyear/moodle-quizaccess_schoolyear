@@ -22,6 +22,9 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+/**
+ * Hook to capture the Schoolyear cookie and redirect params.
+ */
 function quizaccess_schoolyear_after_config() {
     global $PAGE, $CFG;
     if ($PAGE->pagetype == 'login-index') {
@@ -45,6 +48,9 @@ function quizaccess_schoolyear_after_config() {
     }
 }
 
+/**
+ * Decrypts the given string using the Schoolyear API key as decryption key.
+ */
 function decrypt_cookie(string $input) {
     $apikey = get_config('quizaccess_schoolyear', 'apikey');
     $encrypted = base64_decode($input);

@@ -26,6 +26,9 @@ namespace quizaccess_schoolyear\privacy;
 
 use core_privacy\local\metadata\collection;
 
+/**
+ * Privacy Subsystem implementation for the quizaccess_schoolyear plugin.
+ */
 class provider implements
     \core_privacy\local\metadata\provider {
 
