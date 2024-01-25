@@ -50,8 +50,11 @@ function quizaccess_schoolyear_after_config() {
 
 /**
  * Decrypts the given string using the Schoolyear API key as decryption key.
+ *
+ * @param string $input the decrypted value
+ * @return string
  */
-function decrypt_cookie(string $input) {
+function decrypt_cookie(string $input): string {
     $apikey = get_config('quizaccess_schoolyear', 'apikey');
     $encrypted = base64_decode($input);
     $key = substr(hash('sha256', $apikey, true), 0, 32);
