@@ -478,7 +478,24 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         ];
 
         $curl = new curl();
-        $res = $curl->post($apibaseaddress . $path, $data, $options);
+        $url = $apibaseaddress . $path;
+        $res = null;
+        switch (strtolower($method)) {
+            case "post":
+                $res = $curl->post($url, $data, $options);
+                break;
+            case "patch":
+                $res = $curl->patch($url, $data, $options);
+                break;
+            case "get":
+                $res = $curl->get($url, $data, $options);
+                break;
+            case "put":
+                $res = $curl->put($url, $data, $options);
+                break;
+            default:
+                throw new Exception("Unsupported api method $method");
+        }
 
         if ($curl->get_errno()) {
             throw new Exception('An error occurred while invoking the Schoolyear API.');
