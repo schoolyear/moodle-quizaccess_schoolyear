@@ -98,7 +98,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     public static function create_workspace($examid, $cmid, $useridnumber) {
         global $USER, $CFG;
 
-        // in case of teacher which doesn't have an org_code, skip the api call
+        // in case of user which doesn't have an org_code, skip the api call and inform them with an alert div.
         if (empty($useridnumber)) {
             $message = get_string('orgcodemissing', 'quizaccess_schoolyear');
             return html_writer::div($message, 'alert alert-danger');
