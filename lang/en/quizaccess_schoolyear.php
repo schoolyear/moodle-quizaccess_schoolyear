@@ -40,6 +40,7 @@ $string['savefirst'] = 'Save to access the settings and dashboard buttons for th
 $string['timingerror'] = 'Opening and closing time must be set for a Schoolyear exam.';
 $string['apibaseaddress'] = 'Schoolyear API base address';
 $string['apikey'] = 'Schoolyear API key';
+$string['orgcodemissing'] = 'Your account does not have a student ID number, which is required to start an exam with Schoolyear. Contact your Administrator.';
 $string['privacy:metadata:schoolyear'] = 'In order to integrate with Schoolyear, user data needs to be exchanged with Schoolyear services.';
 $string['privacy:metadata:schoolyear:userid'] = 'The userid is sent from Moodle to allow Schoolyear to distinguish users.';
 $string['privacy:metadata:schoolyear:idnumber'] = 'The idnumber is sent from Moodle to allow Schoolyear to identify users.';
