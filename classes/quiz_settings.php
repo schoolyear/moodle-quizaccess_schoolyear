@@ -32,6 +32,7 @@ class quiz_settings extends \core\persistent {
     /** Database table name */
     const TABLE = 'quizaccess_schoolyear';
 
+    // Function define_properties.
     protected static function define_properties(): array {
         return [
             'quizid' => [
