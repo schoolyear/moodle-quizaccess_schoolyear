@@ -32,8 +32,7 @@ use core_privacy\local\metadata\collection;
 class provider implements
     \core_privacy\local\metadata\provider {
 
-        // Function get_metadata.
-        public static function get_metadata(collection $items): collection {
+    public static function get_metadata(collection $items): collection {
         $items->add_external_location_link(
             'schoolyear',
             [

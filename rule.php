@@ -38,7 +38,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     /** Name of the HTTP header to validate signatures. */
     private const X_SY_SIGNATURE_HEADER = 'HTTP_X_SY_SIGNATURE';
 
-    // Function make.
     public static function make(quiz $quizobj, $timenow, $canignoretimelimits) {
         if (empty($quizobj->get_quiz()->schoolyearenabled)) {
             return null;
@@ -47,7 +46,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return new self($quizobj, $timenow);
     }
 
-    // Function prevent_access.
     public function prevent_access() {
         $result = self::validate_signature();
         if (is_string($result)) {
@@ -70,7 +68,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         ];
     }
 
-    // Function validate_signature.
     public static function validate_signature() {
         if (isset($_SERVER[self::X_SY_SIGNATURE_HEADER])) {
             $json = json_encode(['x_sy_signature' => trim($_SERVER[self::X_SY_SIGNATURE_HEADER])]);
@@ -86,7 +83,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return false;
     }
 
-    // Function encrypt_cookie.
     public static function encrypt_cookie(string $input) {
         $apikey = get_config(self::PLUGIN_NAME, 'apikey');
         $key = substr(hash('sha256', $apikey, true), 0, 32);
@@ -99,7 +95,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return base64_encode($iv.$ciphertext.$tag);
     }
 
-    // Function create_workspace creates a workspace for a student. If studentID is missing, it  skips the api call.
     public static function create_workspace($examid, $cmid, $useridnumber) {
         global $USER, $CFG;
 
@@ -151,7 +146,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
-    // Function add_settings_form_fields.
     public static function add_settings_form_fields(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $mform->addElement('select', 'schoolyearenabled', get_string('schoolyearenabled', 'quizaccess_schoolyear'),
             [
@@ -164,7 +158,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         self::add_settings_dashboard_ui_label($quizform, $mform);
     }
 
-    // Function add_settings_ui_button.
     public static function add_settings_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
         if (!empty($record)) {
@@ -188,7 +181,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
-    // Function add_dashboard_ui_button.
     public static function add_dashboard_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
         if (!empty($record)) {
@@ -212,7 +204,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
-    // Function add_settings_dashboard_ui_label.
     public static function add_settings_dashboard_ui_label(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
         if (empty($record)) {
@@ -223,7 +214,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
-    // Function validate_settings_form_fields.
     public static function validate_settings_form_fields(array $errors, array $data, $files, mod_quiz_mod_form $quizform) {
         $name = $data['name'];
         $timeopen = $data['timeopen'];
@@ -263,7 +253,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return $errors;
     }
 
-    // Function get_settings_sql.
     public static function get_settings_sql($quizid) {
         return [
             'schoolyearenabled, examid',
@@ -272,12 +261,10 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         ];
     }
 
-    // Function delete_settings.
     public static function delete_settings($quiz) {
         self::delete_exam($quiz);
     }
 
-    // Function save_settings.
     public static function save_settings($quiz) {
         global $DB;
         $exists = $DB->record_exists(self::PLUGIN_NAME, ['quizid' => $quiz->id]);
@@ -298,7 +285,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
-    // Function create_exam.
     public static function create_exam($quiz) {
         global $CFG;
         $root = $CFG->wwwroot;
@@ -461,7 +447,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
-    // Function update_exam.
     public static function update_exam($quiz) {
         $record = quiz_settings::get_record(['quizid' => $quiz->id]);
         $examid = $record->get('examid');
@@ -476,7 +461,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         self::api_request('PATCH', "/v2/exam/$examid", $json, 'application/merge-patch+json');
     }
 
-    // Function delete_exam.
     public static function delete_exam($quiz) {
         $record = quiz_settings::get_record(['quizid' => $quiz->id]);
         $examid = $record->get('examid');
@@ -487,7 +471,6 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         self::api_request('PUT', "/v2/exam/$examid/archive");
     }
 
-    // Function api_request.
     public static function api_request(string $method, string $path, string $data = '', $contenttype = 'application/json') {
         $apibaseaddress = get_config(self::PLUGIN_NAME, 'apibaseaddress');
         $apikey = get_config(self::PLUGIN_NAME, 'apikey');
