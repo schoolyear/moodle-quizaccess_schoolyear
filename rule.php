@@ -245,7 +245,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
             // Update if needed.
             $current = $quizform->get_current();
-            // if this is a new quiz, return early, otherwise some dbs will complain about a missing quizID.
+            // If this is a new quiz, return early, otherwise some dbs will complain about a missing quizID.
             if (empty($current->id)) {
                 return $errors;
             }
