@@ -249,7 +249,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             if (empty($current->id)) {
                 return $errors;
             }
-            
+
             $quiz = new stdClass();
             $quiz->id = $current->id;
             $quiz->name = $name;
