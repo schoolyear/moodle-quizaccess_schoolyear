@@ -251,6 +251,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             }
             
             $quiz = new stdClass();
+            $quiz->id = $current->id;
             $quiz->name = $name;
             $quiz->timeopen = $timeopen;
             $quiz->timeclose = $timeclose;
