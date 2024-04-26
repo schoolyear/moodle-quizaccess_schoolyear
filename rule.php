@@ -245,14 +245,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
             // Update if needed.
             $current = $quizform->get_current();
-            $quiz = new stdClass();
+            // if this is a new quiz, return early
             if (empty($current->id)) {
-                // If we don't have a quiz Id yet postgres will complain, give
-                // a random id now and it will be auto incremented before db insertion
-                $quiz->id = 1;
-            } else {
-                $quiz->id = $current->id;
+                return $errors;
             }
+            
+            $quiz = new stdClass();
             $quiz->name = $name;
             $quiz->timeopen = $timeopen;
             $quiz->timeclose = $timeclose;
