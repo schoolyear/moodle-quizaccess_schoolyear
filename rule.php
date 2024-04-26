@@ -159,7 +159,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     public static function add_settings_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
-        $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
+        $instance = $quizform->get_instance();
+        if (empty($instance)) {
+            return;
+        }
+
+        $record = quiz_settings::get_record(['quizid' => $instance]);
         if (!empty($record)) {
             $examid = $record->get('examid');
 
@@ -182,7 +187,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     public static function add_dashboard_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
-        $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
+        $instance = $quizform->get_instance();
+        if (empty($instance)) {
+            return;
+        }
+
+        $record = quiz_settings::get_record(['quizid' => $instance]);
         if (!empty($record)) {
             $examid = $record->get('examid');
 
@@ -205,7 +215,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     public static function add_settings_dashboard_ui_label(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
-        $record = quiz_settings::get_record(['quizid' => $quizform->get_instance()]);
+        $instance = $quizform->get_instance();
+        if (empty($instance)) {
+            return;
+        }
+
+        $record = quiz_settings::get_record(['quizid' => $instance]);
         if (empty($record)) {
             $msg = get_string('savefirst', 'quizaccess_schoolyear');
             $group = [$mform->createElement('static', 'sy-btn-label', 'alert', $msg)];
@@ -230,6 +245,11 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
             // Update if needed.
             $current = $quizform->get_current();
+            // If this is a new quiz, return early, otherwise some dbs will complain about a missing quizID.
+            if (empty($current->id)) {
+                return $errors;
+            }
+
             $quiz = new stdClass();
             $quiz->id = $current->id;
             $quiz->name = $name;
