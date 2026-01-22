@@ -483,6 +483,11 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
 
     public static function delete_exam($quiz) {
         $record = quiz_settings::get_record(['quizid' => $quiz->id]);
+
+        if (!$record) {
+            return;
+        }
+
         $examid = $record->get('examid');
 
         global $DB;
