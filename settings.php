@@ -25,7 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
-    $settings->add(new admin_setting_configselect('quizaccess_schoolyear/apibaseaddress',
+    $settings->add(new admin_setting_configselect(
+        'quizaccess_schoolyear/apibaseaddress',
         get_string('apibaseaddress', 'quizaccess_schoolyear'),
         '',
         'https://api.schoolyear.app',
@@ -37,9 +38,11 @@ if ($hassiteconfig) {
         ]
     ));
 
-    $settings->add(new admin_setting_configtext('quizaccess_schoolyear/apikey',
+    $settings->add(new admin_setting_configtext(
+        'quizaccess_schoolyear/apikey',
         get_string('apikey', 'quizaccess_schoolyear'),
         '',
         null,
-        PARAM_RAW));
+        PARAM_RAW
+    ));
 }

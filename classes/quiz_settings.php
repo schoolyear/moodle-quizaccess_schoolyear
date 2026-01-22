@@ -28,7 +28,6 @@ namespace quizaccess_schoolyear;
  * Entity model to describe Schoolyear quiz settings.
  */
 class quiz_settings extends \core\persistent {
-
     /** Database table name */
     const TABLE = 'quizaccess_schoolyear';
 
