@@ -31,7 +31,12 @@ use core_privacy\local\metadata\collection;
  */
 class provider implements
     \core_privacy\local\metadata\provider {
-
+    /**
+     * Returns metadata about this plugin's privacy data.
+     *
+     * @param collection $items The collection to add metadata to.
+     * @return collection The updated collection.
+     */
     public static function get_metadata(collection $items): collection {
         $items->add_external_location_link(
             'schoolyear',
@@ -41,7 +46,8 @@ class provider implements
                 'firstname' => 'privacy:metadata:schoolyear:fullname',
                 'lastname' => 'privacy:metadata:schoolyear:fullname',
             ],
-            'privacy:metadata:schoolyear');
+            'privacy:metadata:schoolyear'
+        );
 
         return $items;
     }

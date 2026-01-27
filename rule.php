@@ -31,13 +31,20 @@ require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
  * Implementaton of the quizaccess_schoolyear plugin.
  */
 class quizaccess_schoolyear extends quiz_access_rule_base {
-
     /** Name of the plugin. */
     private const PLUGIN_NAME = 'quizaccess_schoolyear';
 
     /** Name of the HTTP header to validate signatures. */
     private const X_SY_SIGNATURE_HEADER = 'HTTP_X_SY_SIGNATURE';
 
+    /**
+     * Create an instance of this rule for a particular quiz.
+     *
+     * @param quiz $quizobj The quiz object.
+     * @param int $timenow The current time.
+     * @param bool $canignoretimelimits Whether the user can ignore time limits.
+     * @return self|null The rule instance or null if not applicable.
+     */
     public static function make(quiz $quizobj, $timenow, $canignoretimelimits) {
         if (empty($quizobj->get_quiz()->schoolyearenabled)) {
             return null;
@@ -46,6 +53,11 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return new self($quizobj, $timenow);
     }
 
+    /**
+     * Check if access to the quiz should be prevented.
+     *
+     * @return array|bool Array of messages if access prevented, false otherwise.
+     */
     public function prevent_access() {
         $result = self::validate_signature();
         if (is_string($result)) {
@@ -68,6 +80,11 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         ];
     }
 
+    /**
+     * Validate the Schoolyear signature from the request header.
+     *
+     * @return bool|string True if valid, error string if invalid, false if not present.
+     */
     public static function validate_signature() {
         if (isset($_SERVER[self::X_SY_SIGNATURE_HEADER])) {
             $json = json_encode(['x_sy_signature' => trim($_SERVER[self::X_SY_SIGNATURE_HEADER])]);
@@ -83,6 +100,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return false;
     }
 
+    /**
+     * Encrypt a cookie value using AES-256-GCM.
+     *
+     * @param string $input The value to encrypt.
+     * @return string The base64 encoded encrypted value.
+     */
     public static function encrypt_cookie(string $input) {
         $apikey = get_config(self::PLUGIN_NAME, 'apikey');
         $key = substr(hash('sha256', $apikey, true), 0, 32);
@@ -92,9 +115,17 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $iv = openssl_random_pseudo_bytes($ivlen);
         $tag = "";
         $ciphertext = openssl_encrypt($input, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, "", $taglen);
-        return base64_encode($iv.$ciphertext.$tag);
+        return base64_encode($iv . $ciphertext . $tag);
     }
 
+    /**
+     * Create a Schoolyear workspace for a user.
+     *
+     * @param string $examid The Schoolyear exam ID.
+     * @param int $cmid The course module ID.
+     * @param string $useridnumber The user's ID number.
+     * @return string|null HTML button to start quiz or error message.
+     */
     public static function create_workspace($examid, $cmid, $useridnumber) {
         global $USER, $CFG;
 
@@ -104,7 +135,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             return html_writer::div($message, 'alert alert-danger');
         }
 
-        $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession'.$CFG->sessioncookie]));
+        $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession' . $CFG->sessioncookie]));
         $syr = urlencode("/mod/quiz/view.php?id=$cmid");
 
         $elementid = \core\uuid::generate();
@@ -146,18 +177,36 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
+    /**
+     * Add Schoolyear settings fields to the quiz settings form.
+     *
+     * @param mod_quiz_mod_form $quizform The quiz form object.
+     * @param MoodleQuickForm $mform The form object.
+     * @return void
+     */
     public static function add_settings_form_fields(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
-        $mform->addElement('select', 'schoolyearenabled', get_string('schoolyearenabled', 'quizaccess_schoolyear'),
+        $mform->addElement(
+            'select',
+            'schoolyearenabled',
+            get_string('schoolyearenabled', 'quizaccess_schoolyear'),
             [
                 0 => get_string('schoolyeardisabledoption', 'quizaccess_schoolyear'),
                 1 => get_string('schoolyearenabledoption', 'quizaccess_schoolyear'),
-            ]);
+            ]
+        );
 
         self::add_settings_ui_button($quizform, $mform);
         self::add_dashboard_ui_button($quizform, $mform);
         self::add_settings_dashboard_ui_label($quizform, $mform);
     }
 
+    /**
+     * Add a button to open the Schoolyear settings widget.
+     *
+     * @param mod_quiz_mod_form $quizform The quiz form object.
+     * @param MoodleQuickForm $mform The form object.
+     * @return void
+     */
     public static function add_settings_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $instance = $quizform->get_instance();
         if (empty($instance)) {
@@ -186,6 +235,13 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
+    /**
+     * Add a button to open the Schoolyear dashboard.
+     *
+     * @param mod_quiz_mod_form $quizform The quiz form object.
+     * @param MoodleQuickForm $mform The form object.
+     * @return void
+     */
     public static function add_dashboard_ui_button(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $instance = $quizform->get_instance();
         if (empty($instance)) {
@@ -214,6 +270,13 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
+    /**
+     * Add a label prompting user to save the quiz first if no Schoolyear record exists.
+     *
+     * @param mod_quiz_mod_form $quizform The quiz form object.
+     * @param MoodleQuickForm $mform The form object.
+     * @return void
+     */
     public static function add_settings_dashboard_ui_label(mod_quiz_mod_form $quizform, MoodleQuickForm $mform) {
         $instance = $quizform->get_instance();
         if (empty($instance)) {
@@ -229,6 +292,15 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
+    /**
+     * Validate the Schoolyear settings form fields.
+     *
+     * @param array $errors Array of existing errors.
+     * @param array $data Form data.
+     * @param array $files Uploaded files.
+     * @param mod_quiz_mod_form $quizform The quiz form object.
+     * @return array Updated array of errors.
+     */
     public static function validate_settings_form_fields(array $errors, array $data, $files, mod_quiz_mod_form $quizform) {
         $name = $data['name'];
         $timeopen = $data['timeopen'];
@@ -273,6 +345,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         return $errors;
     }
 
+    /**
+     * Get the SQL fragments for retrieving Schoolyear settings.
+     *
+     * @param int $quizid The quiz ID.
+     * @return array SQL fragments for fields, joins, and params.
+     */
     public static function get_settings_sql($quizid) {
         return [
             'schoolyearenabled, examid',
@@ -281,10 +359,22 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         ];
     }
 
+    /**
+     * Delete Schoolyear settings for a quiz.
+     *
+     * @param stdClass $quiz The quiz object.
+     * @return void
+     */
     public static function delete_settings($quiz) {
         self::delete_exam($quiz);
     }
 
+    /**
+     * Save Schoolyear settings for a quiz.
+     *
+     * @param stdClass $quiz The quiz object.
+     * @return void
+     */
     public static function save_settings($quiz) {
         global $DB;
         $exists = $DB->record_exists(self::PLUGIN_NAME, ['quizid' => $quiz->id]);
@@ -294,7 +384,7 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
             try {
                 self::create_exam($quiz);
             } catch (Exception $e) {
-                \core\notification::error('Failed to create Schoolyear exam. '.$e->getMessage());
+                \core\notification::error('Failed to create Schoolyear exam. ' . $e->getMessage());
             }
             return;
         }
@@ -305,6 +395,13 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
+    /**
+     * Create a Schoolyear exam via the API.
+     *
+     * @param stdClass $quiz The quiz object.
+     * @return void
+     * @throws Exception If the exam creation fails.
+     */
     public static function create_exam($quiz) {
         global $CFG;
         $root = $CFG->wwwroot;
@@ -467,8 +564,19 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         }
     }
 
+    /**
+     * Update a Schoolyear exam via the API.
+     *
+     * @param stdClass $quiz The quiz object.
+     * @return void
+     */
     public static function update_exam($quiz) {
         $record = quiz_settings::get_record(['quizid' => $quiz->id]);
+
+        if (!$record) {
+            return;
+        }
+
         $examid = $record->get('examid');
 
         $json = json_encode([
@@ -481,8 +589,19 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         self::api_request('PATCH', "/v2/exam/$examid", $json, 'application/merge-patch+json');
     }
 
+    /**
+     * Delete and archive a Schoolyear exam via the API.
+     *
+     * @param stdClass $quiz The quiz object.
+     * @return void
+     */
     public static function delete_exam($quiz) {
         $record = quiz_settings::get_record(['quizid' => $quiz->id]);
+
+        if (!$record) {
+            return;
+        }
+
         $examid = $record->get('examid');
 
         global $DB;
@@ -491,6 +610,16 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         self::api_request('PUT', "/v2/exam/$examid/archive");
     }
 
+    /**
+     * Make a request to the Schoolyear API.
+     *
+     * @param string $method The HTTP method (GET, POST, PATCH, PUT).
+     * @param string $path The API endpoint path.
+     * @param string $data The request body data.
+     * @param string $contenttype The content type header.
+     * @return object|null The decoded JSON response or null.
+     * @throws Exception If the API request fails.
+     */
     public static function api_request(string $method, string $path, string $data = '', $contenttype = 'application/json') {
         $apibaseaddress = get_config(self::PLUGIN_NAME, 'apibaseaddress');
         $apikey = get_config(self::PLUGIN_NAME, 'apikey');
@@ -532,15 +661,14 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
         $json = json_decode($res);
 
         if ($statuscode >= 400) {
-            $msg = 'Schoolyear API error (status: '.$statuscode;
+            $msg = 'Schoolyear API error (status: ' . $statuscode;
 
             if (!is_null($res) && is_string($res)) {
-
                 if (!is_null($json->message)) {
-                    $msg .= ', message: '.$json->message;
+                    $msg .= ', message: ' . $json->message;
                 }
                 if (!is_null($json->reason)) {
-                    $msg .= ', reason: '.$json->reason;
+                    $msg .= ', reason: ' . $json->reason;
                 }
             }
 

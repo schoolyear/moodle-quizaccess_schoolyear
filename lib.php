@@ -40,10 +40,10 @@ function quizaccess_schoolyear_after_config() {
 
         $encryptedcookie = rawurldecode($syc);
         $decryptedcookie = decrypt_cookie($encryptedcookie);
-        setcookie('MoodleSession'.$CFG->sessioncookie, $decryptedcookie, 0, $CFG->sessioncookiepath);
+        setcookie('MoodleSession' . $CFG->sessioncookie, $decryptedcookie, 0, $CFG->sessioncookiepath);
 
         $decodedurl = urldecode($syr);
-        header('Location: '.ltrim($CFG->wwwroot, '/').$decodedurl);
+        header('Location: ' . ltrim($CFG->wwwroot, '/') . $decodedurl);
         die();
     }
 }
