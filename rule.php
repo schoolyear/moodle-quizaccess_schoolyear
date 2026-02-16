@@ -81,6 +81,17 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     /**
+     * Set up the attempt page to use secure layout.
+     *
+     * @param moodle_page $page the page object to initialise.
+     */
+    public function setup_attempt_page($page) {
+        if (isset($_SERVER[self::X_SY_SIGNATURE_HEADER])) {
+            $page->set_pagelayout('secure');
+        }
+    }
+
+    /**
      * Validate the Schoolyear signature from the request header.
      *
      * @return bool|string True if valid, error string if invalid, false if not present.
