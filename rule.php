@@ -81,9 +81,10 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     /**
-     * Set up the attempt page to use secure layout.
+     * Sets up the attempt (review or summary) page with any special extra
+     * properties required by this rule.
      *
-     * https://github.com/moodle/moodle/blob/MOODLE_401_STABLE/mod/quiz/accessrule/seb/rule.php#L468
+     * https://github.com/moodle/moodle/blob/860bd3783d366fe3a5ec38b6df1412d065ba4211/mod/quiz/accessrule/seb/rule.php#L468
      *
      * @param moodle_page $page the page object to initialise.
      */

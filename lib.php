@@ -66,34 +66,3 @@ function decrypt_cookie(string $input): string {
     $tag = substr($encrypted, -$taglen);
     return openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag);
 }
-
-/**
- * Inject CSS to hide messaging and communication elements on quiz pages
- * when accessed within the Schoolyear secure workspace.
- *
- * https://github.com/moodle/moodle/blob/MOODLE_401_STABLE/lib/outputrenderers.php#L813
- *
- * @return string HTML containing inline CSS, or empty string if not applicable.
- */
-function quizaccess_schoolyear_before_standard_top_of_body_html() {
-    global $PAGE;
-
-    // Only act on quiz module pages.
-    if (strpos($PAGE->pagetype, 'mod-quiz-') !== 0) {
-        return '';
-    }
-
-    // Only act when inside Schoolyear workspace (signature header present).
-    if (!isset($_SERVER['HTTP_X_SY_SIGNATURE'])) {
-        return '';
-    }
-
-    // Hide messaging/chat UI elements to prevent communication between attempts.
-    return '<style>
-        [data-region="popover-region-messages"],
-        [data-region="message-drawer"],
-        .popover-region-messages {
-            display: none !important;
-        }
-    </style>';
-}
