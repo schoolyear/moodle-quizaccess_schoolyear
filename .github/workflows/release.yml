@@ -1,0 +1,85 @@
+name: Release Plugin
+
+on:
+  push:
+    tags:
+      # Trigger on version tags following Moodle version format (YYYYMMDDXX)
+      - '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: quizaccess_schoolyear
+
+      - name: Validate version consistency
+        run: |
+          # Extract version from version.php
+          VERSION=$(grep -oP '\$plugin->version\s*=\s*\K[0-9]+' quizaccess_schoolyear/version.php | head -1)
+          TAG_VERSION=${GITHUB_REF#refs/tags/}
+
+          if [ "$VERSION" != "$TAG_VERSION" ]; then
+            echo "Error: Tag version ($TAG_VERSION) does not match version.php ($VERSION)"
+            echo "Please ensure the tag matches the version in version.php"
+            exit 1
+          fi
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+          # Extract release version for release notes
+          RELEASE=$(grep -oP '\$plugin->release\s*=\s*'\''\K[^'\'']+' quizaccess_schoolyear/version.php | head -1)
+          echo "RELEASE=$RELEASE" >> $GITHUB_ENV
+
+      - name: Prepare plugin package
+        run: |
+          # Remove unwanted files and directories
+          rm -rf quizaccess_schoolyear/.github
+          rm -f quizaccess_schoolyear/.gitignore
+          rm -f quizaccess_schoolyear/README.md
+
+          # Create the zip file with proper structure
+          zip -r moodle-quizaccess_schoolyear-${VERSION}.zip quizaccess_schoolyear/
+
+          # Display package contents for verification
+          echo "Package contents:"
+          unzip -l moodle-quizaccess_schoolyear-${VERSION}.zip | head -20
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ env.VERSION }}
+          body: |
+            ## Schoolyear Quiz Access Plugin v${{ env.RELEASE }}
+
+            ### Installation
+            1. Download the attached `moodle-quizaccess_schoolyear-${{ env.VERSION }}.zip` file
+            2. Navigate to Site administration > Plugins > Install plugins in your Moodle instance
+            3. Upload the zip file and follow the installation process
+
+            ### Version Information
+            - Version: ${{ env.VERSION }}
+            - Release: ${{ env.RELEASE }}
+
+            ### Requirements
+            - Moodle 3.9 or higher (2020061500+)
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./moodle-quizaccess_schoolyear-${{ env.VERSION }}.zip
+          asset_name: moodle-quizaccess_schoolyear-${{ env.VERSION }}.zip
+          asset_content_type: application/zip
