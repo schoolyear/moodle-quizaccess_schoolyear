@@ -70,6 +70,8 @@ function decrypt_cookie(string $input): string {
 /**
  * Inject CSS to hide messaging and communication elements on quiz pages
  * when accessed within the Schoolyear secure workspace.
+ * 
+ * https://github.com/moodle/moodle/blob/MOODLE_401_STABLE/lib/outputrenderers.php#L813
  *
  * @return string HTML containing inline CSS, or empty string if not applicable.
  */
