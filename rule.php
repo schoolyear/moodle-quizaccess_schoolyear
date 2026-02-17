@@ -81,6 +81,20 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     }
 
     /**
+     * Sets up the attempt (review or summary) page with any special extra
+     * properties required by this rule.
+     *
+     * https://github.com/moodle/moodle/blob/860bd3783d366fe3a5ec38b6df1412d065ba4211/mod/quiz/accessrule/seb/rule.php#L468
+     *
+     * @param moodle_page $page the page object to initialise.
+     */
+    public function setup_attempt_page($page) {
+        if (isset($_SERVER[self::X_SY_SIGNATURE_HEADER])) {
+            $page->set_pagelayout('secure');
+        }
+    }
+
+    /**
      * Validate the Schoolyear signature from the request header.
      *
      * @return bool|string True if valid, error string if invalid, false if not present.
