@@ -38,6 +38,7 @@ jobs:
       - name: Prepare plugin package
         run: |
           # Remove unwanted files and directories
+          rm -rf quizaccess_schoolyear/.git
           rm -rf quizaccess_schoolyear/.github
           rm -f quizaccess_schoolyear/.gitignore
           rm -f quizaccess_schoolyear/README.md
