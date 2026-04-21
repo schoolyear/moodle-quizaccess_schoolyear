@@ -25,7 +25,14 @@
 defined('MOODLE_INTERNAL') || die();
 
 use quizaccess_schoolyear\quiz_settings;
-require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
+
+if (!class_exists('quiz_access_rule_base')) {
+    if (file_exists($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php')) {
+        require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
+    } else {
+        class_alias(\mod_quiz\local\access_rule_base::class, 'quiz_access_rule_base');
+    }
+}
 
 /**
  * Implementaton of the quizaccess_schoolyear plugin.
