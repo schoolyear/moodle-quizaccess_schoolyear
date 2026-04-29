@@ -34,6 +34,10 @@ if (!class_exists('quiz_access_rule_base')) {
     }
 }
 
+if (!class_exists('quiz') && class_exists(\mod_quiz\quiz_settings::class)) {
+    class_alias(\mod_quiz\quiz_settings::class, 'quiz');
+}
+
 /**
  * Implementaton of the quizaccess_schoolyear plugin.
  */
