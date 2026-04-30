@@ -26,22 +26,19 @@ defined('MOODLE_INTERNAL') || die();
 
 use quizaccess_schoolyear\quiz_settings;
 
-if (!class_exists('quiz_access_rule_base')) {
-    if (file_exists($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php')) {
-        require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
-    } else {
-        class_alias(\mod_quiz\local\access_rule_base::class, 'quiz_access_rule_base');
-    }
+if (!class_exists(\mod_quiz\local\access_rule_base::class)) {
+    require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
+    class_alias('quiz_access_rule_base', \mod_quiz\local\access_rule_base::class);
 }
 
-if (!class_exists('quiz') && class_exists(\mod_quiz\quiz_settings::class)) {
-    class_alias(\mod_quiz\quiz_settings::class, 'quiz');
+if (!class_exists(\mod_quiz\quiz_settings::class) && class_exists('quiz')) {
+    class_alias('quiz', \mod_quiz\quiz_settings::class);
 }
 
 /**
  * Implementaton of the quizaccess_schoolyear plugin.
  */
-class quizaccess_schoolyear extends quiz_access_rule_base {
+class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     /** Name of the plugin. */
     private const PLUGIN_NAME = 'quizaccess_schoolyear';
 
@@ -51,12 +48,12 @@ class quizaccess_schoolyear extends quiz_access_rule_base {
     /**
      * Create an instance of this rule for a particular quiz.
      *
-     * @param quiz $quizobj The quiz object.
+     * @param \mod_quiz\quiz_settings $quizobj The quiz object.
      * @param int $timenow The current time.
      * @param bool $canignoretimelimits Whether the user can ignore time limits.
      * @return self|null The rule instance or null if not applicable.
      */
-    public static function make(quiz $quizobj, $timenow, $canignoretimelimits) {
+    public static function make(\mod_quiz\quiz_settings $quizobj, $timenow, $canignoretimelimits) {
         if (empty($quizobj->get_quiz()->schoolyearenabled)) {
             return null;
         }
