@@ -161,7 +161,7 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
         $syr = urlencode("/mod/quiz/view.php?id=$cmid");
 
         $elementid = \core\uuid::generate();
-        $json = json_encode([
+        $payload = [
             'personal_information' => [
                 'org_code' => $useridnumber,
                 'first_name' => $USER->firstname,
@@ -183,7 +183,14 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
                     ],
                 ],
             ],
-        ], JSON_UNESCAPED_SLASHES);
+        ];
+
+        // Include login_hint only if email is present.
+        if (!empty($USER->email)) {
+            $payload['login_hint'] = $USER->email;
+        }
+
+        $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
 
         $response = self::api_request("POST", "/v2/exam/$examid/workspace", $json);
         if ($response) {
