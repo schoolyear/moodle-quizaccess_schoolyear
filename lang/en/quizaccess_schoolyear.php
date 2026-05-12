@@ -41,6 +41,6 @@ $string['apibaseaddress'] = 'Schoolyear API base address';
 $string['apikey'] = 'Schoolyear API key';
 $string['privacy:metadata:schoolyear'] = 'In order to integrate with Schoolyear, user data needs to be exchanged with Schoolyear services.';
 $string['privacy:metadata:schoolyear:userid'] = 'The userid is sent from Moodle to allow Schoolyear to distinguish users.';
-$string['privacy:metadata:schoolyear:idnumber'] = 'The idnumber is sent from Moodle to allow Schoolyear to identify users (optional if not set).'
+$string['privacy:metadata:schoolyear:idnumber'] = 'The idnumber is sent from Moodle to allow Schoolyear to identify users (optional if not set).';
 $string['privacy:metadata:schoolyear:firstname'] = 'Your first name is sent to Schoolyear to allow a better user experience.';
 $string['privacy:metadata:schoolyear:lastname'] = 'Your last name is sent to Schoolyear to allow a better user experience.';
