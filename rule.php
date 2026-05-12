@@ -77,11 +77,8 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
         }
 
         global $USER;
-        if (is_null($USER->idnumber)) {
-            return [get_string('invaliduseridnumber', 'quizaccess_schoolyear')];
-        }
-
-        $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid, $USER->idnumber);
+        $useridnumber = $USER->idnumber ?? '';
+        $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid, $useridnumber);
         return [
             get_string('requiresschoolyear', 'quizaccess_schoolyear'),
             $result,
@@ -150,12 +147,6 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
      */
     public static function create_workspace($examid, $cmid, $useridnumber) {
         global $USER, $CFG;
-
-        // In case of user which doesn't have an org_code, skip the api call and inform them with an alert div.
-        if (empty($useridnumber)) {
-            $message = get_string('orgcodemissing', 'quizaccess_schoolyear');
-            return html_writer::div($message, 'alert alert-danger');
-        }
 
         $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession' . $CFG->sessioncookie]));
         $syr = urlencode("/mod/quiz/view.php?id=$cmid");
