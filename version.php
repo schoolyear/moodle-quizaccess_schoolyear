@@ -25,7 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'quizaccess_schoolyear';
-$plugin->release = '1.0.23';
-$plugin->version = 2026051201;
+$plugin->release = '1.0.24';
+$plugin->version = 2026051301;
 $plugin->requires = 2020061500;
 $plugin->maturity = MATURITY_STABLE;
