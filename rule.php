@@ -138,6 +138,23 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     }
 
     /**
+     * Check if org_code is valid.
+     *
+     * @param string $orgcode The org_code to validate.
+     * @return bool True if valid or empty, false otherwise.
+     */
+    public static function is_org_code_valid(string $orgcode): bool {
+        // If empty, consider it valid (optional field).
+        if (empty($orgcode)) {
+            return true;
+        }
+
+        // Check if alphanumeric only and length is 3-15 characters.
+        $length = strlen($orgcode);
+        return ctype_alnum($orgcode) && $length >= 3 && $length <= 15;
+    }
+
+    /**
      * Create a Schoolyear workspace for a user.
      *
      * @param string $examid The Schoolyear exam ID.
@@ -154,7 +171,6 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
         $elementid = \core\uuid::generate();
         $payload = [
             'personal_information' => [
-                'org_code' => $useridnumber,
                 'first_name' => $USER->firstname,
                 'last_name' => $USER->lastname,
             ],
@@ -175,6 +191,11 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
                 ],
             ],
         ];
+
+        // Include org_code only if it's valid.
+        if (self::is_org_code_valid($useridnumber)) {
+            $payload['personal_information']['org_code'] = $useridnumber;
+        }
 
         // Include login_hint only if email is present.
         if (!empty($USER->email)) {
