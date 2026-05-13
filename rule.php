@@ -149,9 +149,9 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
             return true;
         }
 
-        // Check if alphanumeric only and length is 3-15 characters.
+        // Check if length is 3-15 characters.
         $length = strlen($orgcode);
-        return ctype_alnum($orgcode) && $length >= 3 && $length <= 15;
+        return $length >= 3 && $length <= 15;
     }
 
     /**
