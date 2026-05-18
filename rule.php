@@ -77,11 +77,8 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
         }
 
         global $USER;
-        if (is_null($USER->idnumber)) {
-            return [get_string('invaliduseridnumber', 'quizaccess_schoolyear')];
-        }
-
-        $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid, $USER->idnumber);
+        $useridnumber = $USER->idnumber ?? '';
+        $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid, $useridnumber);
         return [
             get_string('requiresschoolyear', 'quizaccess_schoolyear'),
             $result,
@@ -141,6 +138,23 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     }
 
     /**
+     * Check if org_code is valid.
+     *
+     * @param string $orgcode The org_code to validate.
+     * @return bool True if valid or empty, false otherwise.
+     */
+    public static function is_org_code_valid(string $orgcode): bool {
+        // If empty, consider it valid (optional field).
+        if (empty($orgcode)) {
+            return true;
+        }
+
+        // Check if length is 3-15 characters.
+        $length = strlen($orgcode);
+        return $length >= 3 && $length <= 15;
+    }
+
+    /**
      * Create a Schoolyear workspace for a user.
      *
      * @param string $examid The Schoolyear exam ID.
@@ -151,19 +165,12 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     public static function create_workspace($examid, $cmid, $useridnumber) {
         global $USER, $CFG;
 
-        // In case of user which doesn't have an org_code, skip the api call and inform them with an alert div.
-        if (empty($useridnumber)) {
-            $message = get_string('orgcodemissing', 'quizaccess_schoolyear');
-            return html_writer::div($message, 'alert alert-danger');
-        }
-
         $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession' . $CFG->sessioncookie]));
         $syr = urlencode("/mod/quiz/view.php?id=$cmid");
 
         $elementid = \core\uuid::generate();
-        $json = json_encode([
+        $payload = [
             'personal_information' => [
-                'org_code' => $useridnumber,
                 'first_name' => $USER->firstname,
                 'last_name' => $USER->lastname,
             ],
@@ -183,7 +190,19 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
                     ],
                 ],
             ],
-        ], JSON_UNESCAPED_SLASHES);
+        ];
+
+        // Include org_code only if it's valid.
+        if (self::is_org_code_valid($useridnumber)) {
+            $payload['personal_information']['org_code'] = $useridnumber;
+        }
+
+        // Include login_hint only if email is present.
+        if (!empty($USER->email)) {
+            $payload['login_hint'] = $USER->email;
+        }
+
+        $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
 
         $response = self::api_request("POST", "/v2/exam/$examid/workspace", $json);
         if ($response) {
