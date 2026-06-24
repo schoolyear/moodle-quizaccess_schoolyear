@@ -6,10 +6,17 @@ on:
       # Trigger on version tags following Moodle version format (YYYYMMDDXX)
       - '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]'
 
+permissions:
+  contents: read
+
 jobs:
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
+
+    # Needs write access to create the GitHub Release and upload assets.
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
