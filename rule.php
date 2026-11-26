@@ -76,12 +76,21 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
             return false;
         }
 
-        global $USER;
-        $useridnumber = $USER->idnumber ?? '';
-        $result = self::create_workspace($this->quiz->examid, $this->quiz->cmid, $useridnumber);
+        $url = new moodle_url('/mod/quiz/accessrule/schoolyear/start.php', [
+            'cmid' => $this->quiz->cmid,
+            'sesskey' => sesskey(),
+        ]);
+        $label = get_string('startquiz', 'quizaccess_schoolyear');
+        $button = html_writer::start_tag('div', ['class' => 'singlebutton']);
+        $button .= html_writer::link($url, $label, [
+            'class' => 'btn btn-primary',
+            'title' => $label,
+            'target' => '_blank',
+        ]);
+        $button .= html_writer::end_tag('div');
         return [
             get_string('requiresschoolyear', 'quizaccess_schoolyear'),
-            $result,
+            $button,
         ];
     }
 
@@ -160,7 +169,8 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
      * @param string $examid The Schoolyear exam ID.
      * @param int $cmid The course module ID.
      * @param string $useridnumber The user's ID number.
-     * @return string|null HTML button to start quiz or error message.
+     * @return string The onboarding URL of the workspace.
+     * @throws moodle_exception If the response has no onboarding URL.
      */
     public static function create_workspace($examid, $cmid, $useridnumber) {
         global $USER, $CFG;
@@ -205,17 +215,107 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
         $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
 
         $response = self::api_request("POST", "/v2/exam/$examid/workspace", $json);
-        if ($response) {
-            $label = get_string('startquiz', 'quizaccess_schoolyear');
-            $button = html_writer::start_tag('div', ['class' => 'singlebutton']);
-            $button .= html_writer::link($response->onboarding_url, $label, [
-                'class' => 'btn btn-primary',
-                'title' => $label,
-                'target' => '_blank',
-            ]);
-            $button .= html_writer::end_tag('div');
-            return $button;
+        if (empty($response->onboarding_url)) {
+            throw new moodle_exception('errornourl', 'quizaccess_schoolyear');
         }
+
+        return $response->onboarding_url;
+    }
+
+    /**
+     * Get a fresh URL to the Schoolyear settings widget of an exam.
+     *
+     * @param string $examid The Schoolyear exam ID.
+     * @return string The settings widget URL.
+     * @throws moodle_exception If the response has no URL.
+     */
+    public static function get_settings_ui_url(string $examid): string {
+        $response = self::api_request('POST', "/v2/exam/$examid/ui/settings");
+        if (empty($response->url)) {
+            throw new moodle_exception('errornourl', 'quizaccess_schoolyear');
+        }
+
+        return $response->url;
+    }
+
+    /**
+     * Get a fresh URL to the Schoolyear dashboard of an exam.
+     *
+     * @param string $examid The Schoolyear exam ID.
+     * @return string The dashboard URL.
+     * @throws moodle_exception If the response has no URL.
+     */
+    public static function get_dashboard_ui_url(string $examid): string {
+        $response = self::api_request('POST', "/v2/exam/$examid/ui/dashboard");
+        if (empty($response->url)) {
+            throw new moodle_exception('errornourl', 'quizaccess_schoolyear');
+        }
+
+        return $response->url;
+    }
+
+    /**
+     * Get a fresh Schoolyear settings widget or dashboard URL for a teacher of the quiz.
+     *
+     * @param int $cmid The course module ID of the quiz.
+     * @param string $target The Schoolyear page to open: 'dashboard' or 'settings'.
+     * @return string The URL of the requested page.
+     * @throws moodle_exception If access is denied, the quiz has no exam, the target is unknown or the response has no URL.
+     * @throws Exception If the API request fails.
+     */
+    public static function get_teacher_ui_url(int $cmid, string $target): string {
+        [$course, $cm] = get_course_and_cm_from_cmid($cmid, 'quiz');
+        require_login($course, false, $cm);
+        require_sesskey();
+        require_capability('moodle/course:manageactivities', context_module::instance($cm->id));
+
+        $examid = self::get_exam_id($cm->instance);
+        if ($target === 'dashboard') {
+            return self::get_dashboard_ui_url($examid);
+        } else if ($target === 'settings') {
+            return self::get_settings_ui_url($examid);
+        }
+
+        throw new moodle_exception('errorunknowntarget', 'quizaccess_schoolyear');
+    }
+
+    /**
+     * Create a Schoolyear workspace for the current user of the quiz and get its onboarding URL.
+     *
+     * @param int $cmid The course module ID of the quiz.
+     * @return string The onboarding URL of the workspace.
+     * @throws moodle_exception If access is denied, the quiz has no exam or the response has no onboarding URL.
+     * @throws Exception If the API request fails.
+     */
+    public static function get_student_onboarding_url(int $cmid): string {
+        global $USER;
+
+        [$course, $cm] = get_course_and_cm_from_cmid($cmid, 'quiz');
+        require_login($course, false, $cm);
+        require_sesskey();
+        $context = context_module::instance($cm->id);
+        if (!has_any_capability(['mod/quiz:attempt', 'mod/quiz:preview'], $context)) {
+            throw new required_capability_exception($context, 'mod/quiz:attempt', 'nopermissions', '');
+        }
+
+        $examid = self::get_exam_id($cm->instance);
+        return self::create_workspace($examid, $cm->id, $USER->idnumber ?? '');
+    }
+
+    /**
+     * Get the Schoolyear exam ID of a quiz.
+     *
+     * @param int $quizid The quiz ID.
+     * @return string The Schoolyear exam ID.
+     * @throws moodle_exception If the quiz has no Schoolyear exam.
+     */
+    private static function get_exam_id(int $quizid): string {
+        $record = quiz_settings::get_record(['quizid' => $quizid]);
+        if (empty($record) || empty($record->get('examid'))) {
+            throw new moodle_exception('errornoexam', 'quizaccess_schoolyear');
+        }
+
+        return $record->get('examid');
     }
 
     /**
@@ -256,23 +356,22 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
 
         $record = quiz_settings::get_record(['quizid' => $instance]);
         if (!empty($record)) {
-            $examid = $record->get('examid');
-
-            $response = self::api_request('POST', "/v2/exam/$examid/ui/settings");
-
-            if ($response) {
-                $label = get_string('opensettingswidget', 'quizaccess_schoolyear');
-                $btn = html_writer::start_tag('div', ['class' => 'singlebutton']);
-                $btn .= html_writer::link($response->url, $label, [
-                    'class' => 'btn btn-secondary',
-                    'title' => $label,
-                    'target' => '_blank',
-                ]);
-                $btn .= html_writer::end_tag('div');
-                $btngroup = [$mform->createElement('html', $btn)];
-                $mform->addGroup($btngroup, 'sy-settings-btn', get_string('settingswidget', 'quizaccess_schoolyear'), ' ', false);
-                $mform->hideIf('sy-settings-btn', 'schoolyearenabled', 'neq', 1);
-            }
+            $url = new moodle_url('/mod/quiz/accessrule/schoolyear/open.php', [
+                'cmid' => $quizform->get_coursemodule()->id,
+                'target' => 'settings',
+                'sesskey' => sesskey(),
+            ]);
+            $label = get_string('opensettingswidget', 'quizaccess_schoolyear');
+            $btn = html_writer::start_tag('div', ['class' => 'singlebutton']);
+            $btn .= html_writer::link($url, $label, [
+                'class' => 'btn btn-secondary',
+                'title' => $label,
+                'target' => '_blank',
+            ]);
+            $btn .= html_writer::end_tag('div');
+            $btngroup = [$mform->createElement('html', $btn)];
+            $mform->addGroup($btngroup, 'sy-settings-btn', get_string('settingswidget', 'quizaccess_schoolyear'), ' ', false);
+            $mform->hideIf('sy-settings-btn', 'schoolyearenabled', 'neq', 1);
         }
     }
 
@@ -291,23 +390,22 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
 
         $record = quiz_settings::get_record(['quizid' => $instance]);
         if (!empty($record)) {
-            $examid = $record->get('examid');
-
-            $response = self::api_request('POST', "/v2/exam/$examid/ui/dashboard");
-
-            if ($response) {
-                $label = get_string('opendashboard', 'quizaccess_schoolyear');
-                $btn = html_writer::start_tag('div', ['class' => 'singlebutton']);
-                $btn .= html_writer::link($response->url, $label, [
-                    'class' => 'btn btn-secondary',
-                    'title' => $label,
-                    'target' => '_blank',
-                ]);
-                $btn .= html_writer::end_tag('div');
-                $btngroup = [$mform->createElement('html', $btn)];
-                $mform->addGroup($btngroup, 'sy-dashboard-btn', get_string('dashboard', 'quizaccess_schoolyear'), ' ', false);
-                $mform->hideIf('sy-dashboard-btn', 'schoolyearenabled', 'neq', 1);
-            }
+            $url = new moodle_url('/mod/quiz/accessrule/schoolyear/open.php', [
+                'cmid' => $quizform->get_coursemodule()->id,
+                'target' => 'dashboard',
+                'sesskey' => sesskey(),
+            ]);
+            $label = get_string('opendashboard', 'quizaccess_schoolyear');
+            $btn = html_writer::start_tag('div', ['class' => 'singlebutton']);
+            $btn .= html_writer::link($url, $label, [
+                'class' => 'btn btn-secondary',
+                'title' => $label,
+                'target' => '_blank',
+            ]);
+            $btn .= html_writer::end_tag('div');
+            $btngroup = [$mform->createElement('html', $btn)];
+            $mform->addGroup($btngroup, 'sy-dashboard-btn', get_string('dashboard', 'quizaccess_schoolyear'), ' ', false);
+            $mform->hideIf('sy-dashboard-btn', 'schoolyearenabled', 'neq', 1);
         }
     }
 
