@@ -14,32 +14,37 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace quizaccess_schoolyear;
-
 /**
- * Callbacks for hooks.
+ * Scheduled task to delete expired entry tokens of the quizaccess_schoolyear plugin.
  *
  * @package    quizaccess_schoolyear
  * @copyright  2026 Schoolyear B.V.
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class hook_callbacks {
+
+namespace quizaccess_schoolyear\task;
+
+use quizaccess_schoolyear\token;
+
+/**
+ * Scheduled task to delete expired Schoolyear entry tokens.
+ */
+class cleanup_tokens extends \core\task\scheduled_task {
     /**
-     * Listener for the after_config hook.
+     * Get a descriptive name for this task.
      *
-     * Delegates to quizaccess_schoolyear_after_config(), which older Moodle versions call from lib.php directly.
-     *
-     * @param \core\hook\after_config $hook
+     * @return string
      */
-    public static function after_config(\core\hook\after_config $hook): void {
-        global $CFG;
+    public function get_name(): string {
+        return get_string('taskcleanuptokens', 'quizaccess_schoolyear');
+    }
 
-        if (during_initial_install() || isset($CFG->upgraderunning)) {
-            // Do nothing during installation or upgrade, where Moodle never called the lib.php callback either.
-            return;
-        }
+    /**
+     * Delete the entry tokens that have expired.
+     */
+    public function execute(): void {
+        global $DB;
 
-        require_once($CFG->dirroot . '/mod/quiz/accessrule/schoolyear/lib.php');
-        \quizaccess_schoolyear_after_config();
+        $DB->delete_records_select(token::TABLE, 'timeexpires < :now', ['now' => time()]);
     }
 }

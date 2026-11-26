@@ -15,19 +15,24 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Hook callbacks for the quizaccess_schoolyear plugin.
+ * Logs a student in from the Schoolyear browser with an entry token and redirects to their quiz.
  *
  * @package    quizaccess_schoolyear
  * @copyright  2026 Schoolyear B.V.
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+// The entry token replaces require_login: quizaccess_schoolyear::log_in_with_entry_token logs the user in.
+// phpcs:ignore moodle.Files.RequireLogin.Missing
+require_once(__DIR__ . '/../../../../config.php');
+require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+require_once($CFG->dirroot . '/mod/quiz/accessrule/schoolyear/rule.php');
 
-$callbacks = [
-    [
-        'hook' => \core\hook\after_config::class,
-        // A 'class::method' string, not an array: Moodle 4.3 rejects the array form.
-        'callback' => \quizaccess_schoolyear\hook_callbacks::class . '::after_config',
-    ],
-];
+$token = required_param('token', PARAM_ALPHANUM);
+
+// The page URL leaves out the token, so it does not end up in logs.
+$PAGE->set_context(context_system::instance());
+$PAGE->set_url('/mod/quiz/accessrule/schoolyear/enter.php');
+
+$url = quizaccess_schoolyear::log_in_with_entry_token($token);
+redirect($url);

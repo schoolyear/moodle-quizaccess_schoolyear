@@ -25,6 +25,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 use quizaccess_schoolyear\quiz_settings;
+use quizaccess_schoolyear\token;
 
 if (!class_exists(\mod_quiz\local\access_rule_base::class)) {
     require_once($CFG->dirroot . '/mod/quiz/accessrule/accessrulebase.php');
@@ -44,6 +45,12 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
 
     /** Name of the HTTP header to validate signatures. */
     private const X_SY_SIGNATURE_HEADER = 'HTTP_X_SY_SIGNATURE';
+
+    /** Seconds an entry token stays valid after the student's quiz close time. */
+    private const ENTRY_TOKEN_EXPIRY_AFTER_CLOSE = HOURSECS;
+
+    /** Seconds an entry token stays valid when the student's quiz has no close time. */
+    private const ENTRY_TOKEN_EXPIRY_WITHOUT_CLOSE = DAYSECS;
 
     /**
      * Create an instance of this rule for a particular quiz.
@@ -130,24 +137,6 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     }
 
     /**
-     * Encrypt a cookie value using AES-256-GCM.
-     *
-     * @param string $input The value to encrypt.
-     * @return string The base64 encoded encrypted value.
-     */
-    public static function encrypt_cookie(string $input) {
-        $apikey = get_config(self::PLUGIN_NAME, 'apikey');
-        $key = substr(hash('sha256', $apikey, true), 0, 32);
-        $cipher = 'aes-256-gcm';
-        $ivlen = openssl_cipher_iv_length($cipher);
-        $taglen = 16;
-        $iv = openssl_random_pseudo_bytes($ivlen);
-        $tag = "";
-        $ciphertext = openssl_encrypt($input, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag, "", $taglen);
-        return base64_encode($iv . $ciphertext . $tag);
-    }
-
-    /**
      * Check if org_code is valid.
      *
      * @param string $orgcode The org_code to validate.
@@ -165,19 +154,17 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     }
 
     /**
-     * Create a Schoolyear workspace for a user.
+     * Create a Schoolyear workspace for the current user.
      *
      * @param string $examid The Schoolyear exam ID.
-     * @param int $cmid The course module ID.
+     * @param moodle_url $entryurl The URL the Schoolyear browser opens to log the user in.
      * @param string $useridnumber The user's ID number.
-     * @return string The onboarding URL of the workspace.
-     * @throws moodle_exception If the response has no onboarding URL.
+     * @return stdClass The API response, with the workspace ID and the onboarding URL of the workspace.
+     * @throws moodle_exception If the response has no onboarding URL or workspace ID.
+     * @throws Exception If the API request fails.
      */
-    public static function create_workspace($examid, $cmid, $useridnumber) {
-        global $USER, $CFG;
-
-        $syc = rawurlencode(self::encrypt_cookie($_COOKIE['MoodleSession' . $CFG->sessioncookie]));
-        $syr = urlencode("/mod/quiz/view.php?id=$cmid");
+    public static function create_workspace(string $examid, moodle_url $entryurl, string $useridnumber): stdClass {
+        global $USER;
 
         $elementid = \core\uuid::generate();
         $payload = [
@@ -192,7 +179,7 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
                         $elementid => [
                             'type' => 'web_page_url',
                             'url' => [
-                                'url' => "$CFG->wwwroot/login/index.php?noredirect=1&syc=$syc&syr=$syr",
+                                'url' => $entryurl->out(false),
                             ],
                         ],
                     ],
@@ -216,11 +203,11 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
         $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
 
         $response = self::api_request("POST", "/v2/exam/$examid/workspace", $json);
-        if (empty($response->onboarding_url)) {
+        if (empty($response->onboarding_url) || empty($response->workspace_id)) {
             throw new moodle_exception('errornourl', 'quizaccess_schoolyear');
         }
 
-        return $response->onboarding_url;
+        return $response;
     }
 
     /**
@@ -283,9 +270,12 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     /**
      * Create a Schoolyear workspace for the current user of the quiz and get its onboarding URL.
      *
+     * The workspace opens an entry URL with a new token, which logs the user in to the quiz from the Schoolyear browser.
+     *
      * @param int $cmid The course module ID of the quiz.
      * @return string The onboarding URL of the workspace.
-     * @throws moodle_exception If access is denied, the quiz has no exam or the response has no onboarding URL.
+     * @throws moodle_exception If access is denied, the session is a "log in as" session, the quiz has no exam or the
+     *     response has no onboarding URL or workspace ID.
      * @throws Exception If the API request fails.
      */
     public static function get_student_onboarding_url(int $cmid): string {
@@ -299,8 +289,89 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
             throw new required_capability_exception($context, 'mod/quiz:attempt', 'nopermissions', '');
         }
 
+        // A token would log the user in without the limits of a "log in as" session.
+        if (\core\session\manager::is_loggedinas()) {
+            throw new moodle_exception('errorloggedinas', 'quizaccess_schoolyear');
+        }
+
         $examid = self::get_exam_id($cm->instance);
-        return self::create_workspace($examid, $cm->id, $USER->idnumber ?? '');
+
+        // The close time includes the user and group overrides of the current user.
+        $quiz = \mod_quiz\quiz_settings::create($cm->instance, $USER->id)->get_quiz();
+        if (empty($quiz->timeclose)) {
+            $timeexpires = time() + self::ENTRY_TOKEN_EXPIRY_WITHOUT_CLOSE;
+        } else {
+            $timeexpires = $quiz->timeclose + self::ENTRY_TOKEN_EXPIRY_AFTER_CLOSE;
+        }
+
+        $token = random_string(64);
+        $entryurl = new moodle_url('/mod/quiz/accessrule/schoolyear/enter.php', ['token' => $token]);
+        $workspace = self::create_workspace($examid, $entryurl, $USER->idnumber ?? '');
+
+        // Store the token after the API call, so a failed call leaves no token, and only as a hash.
+        $record = new token(0, (object) [
+            'tokenhash' => hash('sha256', $token),
+            'userid' => $USER->id,
+            'cmid' => $cm->id,
+            'workspaceid' => $workspace->workspace_id,
+            'timeexpires' => $timeexpires,
+        ]);
+        $record->create();
+
+        return $workspace->onboarding_url;
+    }
+
+    /**
+     * Log the user of an entry token in and get the URL of the quiz the token was created for.
+     *
+     * The Schoolyear browser opens the entry URL on every start, so a token stays valid until it expires.
+     *
+     * @param string $token The entry token from the entry URL.
+     * @return moodle_url The URL of the quiz.
+     * @throws moodle_exception If the request does not come from the workspace of a valid token, another user is
+     *     logged in or the user of the token may not log in.
+     * @throws Exception If the API request fails.
+     */
+    public static function log_in_with_entry_token(string $token): moodle_url {
+        global $USER;
+
+        // The API validates the signature last, so it is only called for a request that matches a stored token.
+        $parts = explode('.', trim($_SERVER[self::X_SY_SIGNATURE_HEADER] ?? ''));
+        $record = count($parts) === 3 ? token::get_record(['tokenhash' => hash('sha256', $token)]) : false;
+        if (
+            empty($record)
+            || $record->get('timeexpires') < time()
+            || $record->get('workspaceid') !== $parts[1]
+            || self::validate_signature() !== true
+        ) {
+            throw new moodle_exception('errorentrydenied', 'quizaccess_schoolyear');
+        }
+
+        $userid = $record->get('userid');
+        $url = new moodle_url('/mod/quiz/view.php', ['id' => $record->get('cmid')]);
+
+        if (isloggedin() && !isguestuser()) {
+            if ($USER->id == $userid) {
+                return $url;
+            }
+            throw new moodle_exception('alreadyloggedin', 'error', '', format_string(fullname($USER)));
+        }
+
+        $user = core_user::get_user($userid, '*', MUST_EXIST);
+        core_user::require_active_user($user, true, true);
+        if (!$user = get_complete_user_data('id', $userid)) {
+            throw new moodle_exception('cannotfinduser', '', '', $userid);
+        }
+
+        complete_user_login($user);
+        \core\session\manager::apply_concurrent_login_limit($user->id, session_id());
+
+        // The session that created the token passed MFA in require_login(), and the MFA page is not on the exam's allow-list.
+        if (class_exists(\tool_mfa\manager::class) && \tool_mfa\manager::is_ready()) {
+            \tool_mfa\manager::set_pass_state();
+        }
+
+        return $url;
     }
 
     /**
@@ -564,11 +635,9 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
                                 'url_regex' => [
                                     'protocol' => $protocol,
                                     'hostname' => $hostname,
-                                    'pathname' => '*/login/index.php',
+                                    'pathname' => '*/mod/quiz/accessrule/schoolyear/enter.php',
                                     'search_params' => [
-                                        'noredirect' => '1',
-                                        'syc' => '*',
-                                        'syr' => '*',
+                                        'token' => '*',
                                     ],
                                 ],
                             ],
@@ -730,7 +799,7 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     }
 
     /**
-     * Delete and archive a Schoolyear exam via the API.
+     * Delete the Schoolyear settings and entry tokens of a quiz, and archive its exam via the API.
      *
      * @param stdClass $quiz The quiz object.
      * @return void
@@ -746,6 +815,11 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
 
         global $DB;
         $DB->delete_records(self::PLUGIN_NAME, ['quizid' => $quiz->id]);
+
+        $cm = get_coursemodule_from_instance('quiz', $quiz->id);
+        if ($cm) {
+            $DB->delete_records(token::TABLE, ['cmid' => $cm->id]);
+        }
 
         self::api_request('PUT', "/v2/exam/$examid/archive");
     }
