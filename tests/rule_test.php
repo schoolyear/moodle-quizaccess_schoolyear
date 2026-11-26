@@ -73,6 +73,7 @@ final class rule_test extends \advanced_testcase {
 
         unset($_COOKIE['MoodleSession' . $CFG->sessioncookie]);
         unset($_GET['sesskey']);
+        unset($_SERVER['HTTP_X_SY_SIGNATURE']);
         parent::tearDown();
     }
 
@@ -93,6 +94,19 @@ final class rule_test extends \advanced_testcase {
         $this->getDataGenerator()->enrol_user($user->id, $this->course->id, $role);
         $this->setUser($user);
         $_GET['sesskey'] = sesskey();
+    }
+
+    /**
+     * Provider of signature validation response bodies and whether each one means the signature is valid.
+     *
+     * @return array
+     */
+    public static function signature_response_provider(): array {
+        return [
+            'ok true' => ['{"ok":true}', true],
+            'ok false' => ['{"ok":false}', false],
+            'no ok field' => ['{}', false],
+        ];
     }
 
     /**
@@ -149,6 +163,54 @@ final class rule_test extends \advanced_testcase {
         ]);
         $this->assertCount(2, $result);
         $this->assertStringContainsString('href="' . $url->out() . '"', $result[1]);
+    }
+
+    /**
+     * Test access is allowed only when the API accepts the signature.
+     *
+     * @param string $body Response body of the API.
+     * @param bool $valid Whether the signature is valid.
+     * @dataProvider signature_response_provider
+     */
+    public function test_prevent_access_checks_signature(string $body, bool $valid): void {
+        $_SERVER['HTTP_X_SY_SIGNATURE'] = 'signature';
+
+        \curl::mock_response($body);
+        $rule = quizaccess_schoolyear::make(\mod_quiz\quiz_settings::create($this->quiz->id), time(), false);
+        $result = $rule->prevent_access();
+
+        $expected = $valid ? false : [get_string('errorverifying', 'quizaccess_schoolyear')];
+        $this->assertSame($expected, $result);
+    }
+
+    /**
+     * Test validating the signature without the header returns false without calling the API.
+     */
+    public function test_validate_signature_returns_false_without_header(): void {
+        unset($_SERVER['HTTP_X_SY_SIGNATURE']);
+
+        \curl::mock_response(self::SENTINEL);
+        $result = quizaccess_schoolyear::validate_signature();
+        $this->assert_no_api_call();
+
+        $this->assertFalse($result);
+    }
+
+    /**
+     * Test validating the signature accepts only an API response with ok set to true.
+     *
+     * @param string $body Response body of the API.
+     * @param bool $valid Whether the signature is valid.
+     * @dataProvider signature_response_provider
+     */
+    public function test_validate_signature_checks_ok_field(string $body, bool $valid): void {
+        $_SERVER['HTTP_X_SY_SIGNATURE'] = 'signature';
+
+        \curl::mock_response($body);
+        $result = quizaccess_schoolyear::validate_signature();
+
+        $expected = $valid ? true : get_string('errorverifying', 'quizaccess_schoolyear');
+        $this->assertSame($expected, $result);
     }
 
     /**
