@@ -52,6 +52,9 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     /** Seconds an entry token stays valid when the student's quiz has no close time. */
     private const ENTRY_TOKEN_EXPIRY_WITHOUT_CLOSE = DAYSECS;
 
+    /** Domain that the URLs from the Schoolyear API must be on, directly or on a subdomain. */
+    private const ALLOWED_URL_DOMAIN = 'schoolyear.app';
+
     /**
      * Create an instance of this rule for a particular quiz.
      *
@@ -160,7 +163,7 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
      * @param moodle_url $entryurl The URL the Schoolyear browser opens to log the user in.
      * @param string $useridnumber The user's ID number.
      * @return stdClass The API response, with the workspace ID and the onboarding URL of the workspace.
-     * @throws moodle_exception If the response has no onboarding URL or workspace ID.
+     * @throws moodle_exception If the response has no workspace ID or no HTTPS Schoolyear onboarding URL.
      * @throws Exception If the API request fails.
      */
     public static function create_workspace(string $examid, moodle_url $entryurl, string $useridnumber): stdClass {
@@ -206,6 +209,7 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
         if (empty($response->onboarding_url) || empty($response->workspace_id)) {
             throw new moodle_exception('errornourl', 'quizaccess_schoolyear');
         }
+        self::require_schoolyear_url($response->onboarding_url);
 
         return $response;
     }
@@ -215,13 +219,14 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
      *
      * @param string $examid The Schoolyear exam ID.
      * @return string The settings widget URL.
-     * @throws moodle_exception If the response has no URL.
+     * @throws moodle_exception If the response has no HTTPS Schoolyear URL.
      */
     public static function get_settings_ui_url(string $examid): string {
         $response = self::api_request('POST', "/v2/exam/$examid/ui/settings");
         if (empty($response->url)) {
             throw new moodle_exception('errornourl', 'quizaccess_schoolyear');
         }
+        self::require_schoolyear_url($response->url);
 
         return $response->url;
     }
@@ -231,13 +236,14 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
      *
      * @param string $examid The Schoolyear exam ID.
      * @return string The dashboard URL.
-     * @throws moodle_exception If the response has no URL.
+     * @throws moodle_exception If the response has no HTTPS Schoolyear URL.
      */
     public static function get_dashboard_ui_url(string $examid): string {
         $response = self::api_request('POST', "/v2/exam/$examid/ui/dashboard");
         if (empty($response->url)) {
             throw new moodle_exception('errornourl', 'quizaccess_schoolyear');
         }
+        self::require_schoolyear_url($response->url);
 
         return $response->url;
     }
@@ -248,7 +254,8 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
      * @param int $cmid The course module ID of the quiz.
      * @param string $target The Schoolyear page to open: 'dashboard' or 'settings'.
      * @return string The URL of the requested page.
-     * @throws moodle_exception If access is denied, the quiz has no exam, the target is unknown or the response has no URL.
+     * @throws moodle_exception If access is denied, the quiz has no exam, the target is unknown or the response has no HTTPS
+     *     Schoolyear URL.
      * @throws Exception If the API request fails.
      */
     public static function get_teacher_ui_url(int $cmid, string $target): string {
@@ -275,7 +282,7 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
      * @param int $cmid The course module ID of the quiz.
      * @return string The onboarding URL of the workspace.
      * @throws moodle_exception If access is denied, the session is a "log in as" session, the quiz has no exam or the
-     *     response has no onboarding URL or workspace ID.
+     *     response has no workspace ID or no HTTPS Schoolyear onboarding URL.
      * @throws Exception If the API request fails.
      */
     public static function get_student_onboarding_url(int $cmid): string {
@@ -388,6 +395,25 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
         }
 
         return $record->get('examid');
+    }
+
+    /**
+     * Require a URL from the Schoolyear API to be an HTTPS URL on the Schoolyear domain or one of its subdomains.
+     *
+     * @param string $url The URL from the API response.
+     * @throws moodle_exception If the URL is not an HTTPS URL on the Schoolyear domain or one of its subdomains.
+     */
+    private static function require_schoolyear_url(string $url): void {
+        $parts = parse_url($url);
+        $alloweddomains = [self::ALLOWED_URL_DOMAIN, '*.' . self::ALLOWED_URL_DOMAIN];
+        // Browsers open https://evil.test\@x.schoolyear.app on evil.test, where parse_url() reads x.schoolyear.app as the host.
+        if (
+            ($parts['scheme'] ?? null) !== 'https'
+            || isset($parts['user'])
+            || !\core\ip_utils::is_domain_in_allowed_list($parts['host'] ?? '', $alloweddomains)
+        ) {
+            throw new moodle_exception('errorinvalidurl', 'quizaccess_schoolyear');
+        }
     }
 
     /**

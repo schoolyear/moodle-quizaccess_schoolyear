@@ -78,7 +78,7 @@ jobs:
             - Release: ${{ env.RELEASE }}
 
             ### Requirements
-            - Moodle 3.9 or higher (2020061500+)
+            - Moodle 4.1 to 5.1 (2022112800+)
           draft: false
           prerelease: false
 
