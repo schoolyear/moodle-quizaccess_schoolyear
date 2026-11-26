@@ -49,6 +49,18 @@ class provider implements
             'privacy:metadata:schoolyear'
         );
 
+        $items->add_database_table(
+            'quizaccess_schoolyear_token',
+            [
+                'tokenhash' => 'privacy:metadata:quizaccess_schoolyear_token:tokenhash',
+                'userid' => 'privacy:metadata:quizaccess_schoolyear_token:userid',
+                'cmid' => 'privacy:metadata:quizaccess_schoolyear_token:cmid',
+                'workspaceid' => 'privacy:metadata:quizaccess_schoolyear_token:workspaceid',
+                'timeexpires' => 'privacy:metadata:quizaccess_schoolyear_token:timeexpires',
+            ],
+            'privacy:metadata:quizaccess_schoolyear_token'
+        );
+
         return $items;
     }
 }
