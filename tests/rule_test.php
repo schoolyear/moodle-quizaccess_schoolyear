@@ -21,6 +21,7 @@ use quizaccess_schoolyear;
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
+require_once($CFG->dirroot . '/course/lib.php');
 require_once($CFG->dirroot . '/mod/quiz/locallib.php');
 require_once($CFG->dirroot . '/mod/quiz/mod_form.php');
 require_once($CFG->dirroot . '/mod/quiz/accessrule/schoolyear/rule.php');
@@ -739,5 +740,44 @@ final class rule_test extends \advanced_testcase {
         $this->log_in_with_entry_token();
 
         $this->assertSame($ready, !empty($SESSION->tool_mfa_authenticated));
+    }
+
+    /**
+     * Test deleting a quiz deletes its entry tokens and keeps those of other quizzes.
+     */
+    public function test_delete_settings_deletes_entry_tokens_of_deleted_quiz(): void {
+        global $DB;
+
+        $user = $this->getDataGenerator()->create_user();
+        $otherquiz = $this->getDataGenerator()->create_module('quiz', ['course' => $this->course->id]);
+        $this->create_token($user->id, time() + HOURSECS);
+        $othertoken = new token(0, (object) [
+            'tokenhash' => hash('sha256', 'othertoken'),
+            'userid' => $user->id,
+            'cmid' => $otherquiz->cmid,
+            'workspaceid' => self::WORKSPACE_ID,
+            'timeexpires' => time() + HOURSECS,
+        ]);
+        $othertoken->create();
+
+        \curl::mock_response('{}');
+        course_delete_module($this->quiz->cmid);
+
+        $this->assertFalse($DB->record_exists('quizaccess_schoolyear_token', ['cmid' => $this->quiz->cmid]));
+        $this->assertTrue($DB->record_exists('quizaccess_schoolyear_token', ['cmid' => $otherquiz->cmid]));
+    }
+
+    /**
+     * Test disabling Schoolyear for a quiz deletes its entry tokens.
+     */
+    public function test_save_settings_deletes_entry_tokens_when_schoolyear_is_disabled(): void {
+        global $DB;
+
+        $this->create_token($this->getDataGenerator()->create_user()->id, time() + HOURSECS);
+
+        \curl::mock_response('{}');
+        quizaccess_schoolyear::save_settings((object) ['id' => $this->quiz->id, 'schoolyearenabled' => 0]);
+
+        $this->assertSame(0, $DB->count_records('quizaccess_schoolyear_token'));
     }
 }

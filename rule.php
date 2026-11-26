@@ -799,7 +799,7 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
     }
 
     /**
-     * Delete and archive a Schoolyear exam via the API.
+     * Delete the Schoolyear settings and entry tokens of a quiz, and archive its exam via the API.
      *
      * @param stdClass $quiz The quiz object.
      * @return void
@@ -815,6 +815,11 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
 
         global $DB;
         $DB->delete_records(self::PLUGIN_NAME, ['quizid' => $quiz->id]);
+
+        $cm = get_coursemodule_from_instance('quiz', $quiz->id);
+        if ($cm) {
+            $DB->delete_records(token::TABLE, ['cmid' => $cm->id]);
+        }
 
         self::api_request('PUT', "/v2/exam/$examid/archive");
     }
