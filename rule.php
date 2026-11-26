@@ -118,7 +118,8 @@ class quizaccess_schoolyear extends \mod_quiz\local\access_rule_base {
             $json = json_encode(['x_sy_signature' => trim($_SERVER[self::X_SY_SIGNATURE_HEADER])]);
             $response = self::api_request('POST', '/v2/signature/validate', $json);
 
-            if ($response) {
+            // The API answers an invalid signature with HTTP 200 and {"ok":false}, so check the field, not the response.
+            if (($response->ok ?? null) === true) {
                 return true;
             } else {
                 return get_string('errorverifying', 'quizaccess_schoolyear');
