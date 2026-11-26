@@ -32,6 +32,7 @@ $string['requiresschoolyear'] = 'This quiz requires the Schoolyear application.'
 $string['errorverifying'] = 'An error occurred while verifying Schoolyear browser.';
 $string['errornoexam'] = 'This quiz is not linked to a Schoolyear exam.';
 $string['errornourl'] = 'The Schoolyear API did not return a URL.';
+$string['errorinvalidurl'] = 'The Schoolyear API returned an invalid URL.';
 $string['errorunknowntarget'] = 'Unknown Schoolyear page requested.';
 $string['errorentrydenied'] = 'This Schoolyear link is not valid or has expired. Close Schoolyear and start the quiz again from Moodle.';
 $string['errorloggedinas'] = 'You cannot start Schoolyear while you are logged in as another user.';

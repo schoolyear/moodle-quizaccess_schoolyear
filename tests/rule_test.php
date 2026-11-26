@@ -50,7 +50,7 @@ final class rule_test extends \advanced_testcase {
     /** API response body of a created workspace. */
     private const WORKSPACE_RESPONSE = [
         'workspace_id' => self::WORKSPACE_ID,
-        'onboarding_url' => 'https://app.schoolyear.test/onboarding',
+        'onboarding_url' => 'https://app.schoolyear.app/onboarding',
     ];
 
     /** @var \stdClass $course Test course to contain quiz. */
@@ -157,6 +157,22 @@ final class rule_test extends \advanced_testcase {
     }
 
     /**
+     * Combine each method that returns a teacher UI URL with each case of a URL provider.
+     *
+     * @param array $urlcases Cases of a URL provider.
+     * @return array
+     */
+    private static function with_ui_url_methods(array $urlcases): array {
+        $cases = [];
+        foreach (self::ui_url_method_provider() as $methodname => $methodargs) {
+            foreach ($urlcases as $urlname => $urlargs) {
+                $cases["$methodname, $urlname"] = array_merge($methodargs, $urlargs);
+            }
+        }
+        return $cases;
+    }
+
+    /**
      * Provider of signature validation response bodies and whether each one means the signature is valid.
      *
      * @return array
@@ -179,6 +195,56 @@ final class rule_test extends \advanced_testcase {
             'settings' => ['get_settings_ui_url'],
             'dashboard' => ['get_dashboard_ui_url'],
         ];
+    }
+
+    /**
+     * Provider of URLs the plugin accepts from the API.
+     *
+     * @return array
+     */
+    public static function valid_url_provider(): array {
+        return [
+            'subdomain' => ['https://dashboard.exams.schoolyear.app/x'],
+            'upper case host' => ['https://DASHBOARD.EXAMS.SCHOOLYEAR.APP/x'],
+            'domain' => ['https://schoolyear.app/x'],
+        ];
+    }
+
+    /**
+     * Provider of URLs the plugin rejects from the API.
+     *
+     * @return array
+     */
+    public static function invalid_url_provider(): array {
+        return [
+            'http' => ['http://dashboard.exams.schoolyear.app/x'],
+            'other domain' => ['https://evil.test/x'],
+            'domain name as suffix' => ['https://evilschoolyear.app/x'],
+            'domain as subdomain of other domain' => ['https://schoolyear.app.evil.test/x'],
+            'domain as user info' => ['https://dashboard.exams.schoolyear.app@evil.test/x'],
+            'other domain before backslash' => ['https://evil.test\\@dashboard.exams.schoolyear.app/x'],
+            'javascript' => ['javascript:alert(1)'],
+            'protocol-relative' => ['//dashboard.exams.schoolyear.app/x'],
+            'path' => ['/local/path'],
+        ];
+    }
+
+    /**
+     * Provider of the methods that return a teacher UI URL, with each URL the plugin accepts.
+     *
+     * @return array
+     */
+    public static function ui_url_method_valid_url_provider(): array {
+        return self::with_ui_url_methods(self::valid_url_provider());
+    }
+
+    /**
+     * Provider of the methods that return a teacher UI URL, with each URL the plugin rejects.
+     *
+     * @return array
+     */
+    public static function ui_url_method_invalid_url_provider(): array {
+        return self::with_ui_url_methods(self::invalid_url_provider());
     }
 
     /**
@@ -213,7 +279,7 @@ final class rule_test extends \advanced_testcase {
     public static function incomplete_workspace_response_provider(): array {
         return [
             'no onboarding URL' => [['workspace_id' => self::WORKSPACE_ID]],
-            'no workspace ID' => [['onboarding_url' => 'https://app.schoolyear.test/onboarding']],
+            'no workspace ID' => [['onboarding_url' => 'https://app.schoolyear.app/onboarding']],
         ];
     }
 
@@ -327,15 +393,19 @@ final class rule_test extends \advanced_testcase {
 
     /**
      * Test creating a workspace returns the API response.
+     *
+     * @param string $url Onboarding URL in the API response.
+     * @dataProvider valid_url_provider
      */
-    public function test_create_workspace_returns_response(): void {
+    public function test_create_workspace_returns_response(string $url): void {
         $this->setUser($this->getDataGenerator()->create_user());
 
-        \curl::mock_response(json_encode(self::WORKSPACE_RESPONSE));
+        $body = ['onboarding_url' => $url] + self::WORKSPACE_RESPONSE;
+        \curl::mock_response(json_encode($body));
         $entryurl = new \moodle_url('/mod/quiz/accessrule/schoolyear/enter.php', ['token' => self::TOKEN]);
         $response = quizaccess_schoolyear::create_workspace('exam', $entryurl, '');
 
-        $this->assertEquals((object) self::WORKSPACE_RESPONSE, $response);
+        $this->assertEquals((object) $body, $response);
     }
 
     /**
@@ -356,15 +426,33 @@ final class rule_test extends \advanced_testcase {
     }
 
     /**
+     * Test creating a workspace throws when the onboarding URL in the API response is not an HTTPS Schoolyear URL.
+     *
+     * @param string $url Onboarding URL in the API response.
+     * @dataProvider invalid_url_provider
+     */
+    public function test_create_workspace_rejects_invalid_url(string $url): void {
+        $this->setUser($this->getDataGenerator()->create_user());
+
+        \curl::mock_response(json_encode(['onboarding_url' => $url] + self::WORKSPACE_RESPONSE));
+        $entryurl = new \moodle_url('/mod/quiz/accessrule/schoolyear/enter.php', ['token' => self::TOKEN]);
+
+        $this->expectException(\moodle_exception::class);
+        $this->expectExceptionMessage(get_string('errorinvalidurl', 'quizaccess_schoolyear'));
+        quizaccess_schoolyear::create_workspace('exam', $entryurl, '');
+    }
+
+    /**
      * Test a teacher UI URL method returns the URL from the API response.
      *
      * @param string $method Name of the method under test.
-     * @dataProvider ui_url_method_provider
+     * @param string $url URL in the API response.
+     * @dataProvider ui_url_method_valid_url_provider
      */
-    public function test_get_ui_url_returns_url(string $method): void {
-        \curl::mock_response(json_encode(['url' => 'https://app.schoolyear.test/ui']));
+    public function test_get_ui_url_returns_url(string $method, string $url): void {
+        \curl::mock_response(json_encode(['url' => $url]));
 
-        $this->assertSame('https://app.schoolyear.test/ui', quizaccess_schoolyear::$method('exam'));
+        $this->assertSame($url, quizaccess_schoolyear::$method('exam'));
     }
 
     /**
@@ -378,6 +466,21 @@ final class rule_test extends \advanced_testcase {
 
         $this->expectException(\moodle_exception::class);
         $this->expectExceptionMessage(get_string('errornourl', 'quizaccess_schoolyear'));
+        quizaccess_schoolyear::$method('exam');
+    }
+
+    /**
+     * Test a teacher UI URL method throws when the URL in the API response is not an HTTPS Schoolyear URL.
+     *
+     * @param string $method Name of the method under test.
+     * @param string $url URL in the API response.
+     * @dataProvider ui_url_method_invalid_url_provider
+     */
+    public function test_get_ui_url_rejects_invalid_url(string $method, string $url): void {
+        \curl::mock_response(json_encode(['url' => $url]));
+
+        $this->expectException(\moodle_exception::class);
+        $this->expectExceptionMessage(get_string('errorinvalidurl', 'quizaccess_schoolyear'));
         quizaccess_schoolyear::$method('exam');
     }
 
@@ -483,10 +586,10 @@ final class rule_test extends \advanced_testcase {
     public function test_get_teacher_ui_url_returns_url(string $target): void {
         $this->log_in_enrolled_user('editingteacher');
 
-        \curl::mock_response(json_encode(['url' => 'https://app.schoolyear.test/ui']));
+        \curl::mock_response(json_encode(['url' => 'https://app.schoolyear.app/ui']));
         $url = quizaccess_schoolyear::get_teacher_ui_url($this->quiz->cmid, $target);
 
-        $this->assertSame('https://app.schoolyear.test/ui', $url);
+        $this->assertSame('https://app.schoolyear.app/ui', $url);
     }
 
     /**
@@ -517,7 +620,7 @@ final class rule_test extends \advanced_testcase {
         \curl::mock_response(json_encode(self::WORKSPACE_RESPONSE));
         $url = quizaccess_schoolyear::get_student_onboarding_url($this->quiz->cmid);
 
-        $this->assertSame('https://app.schoolyear.test/onboarding', $url);
+        $this->assertSame('https://app.schoolyear.app/onboarding', $url);
     }
 
     /**
@@ -585,6 +688,27 @@ final class rule_test extends \advanced_testcase {
 
         $this->assertInstanceOf(\moodle_exception::class, $exception);
         $this->assertSame(get_string('errornourl', 'quizaccess_schoolyear'), $exception->getMessage());
+        $this->assertSame(0, $DB->count_records('quizaccess_schoolyear_token'));
+    }
+
+    /**
+     * Test onboarding stores no entry token when the onboarding URL in the API response is not an HTTPS Schoolyear URL.
+     */
+    public function test_get_student_onboarding_url_stores_no_token_with_invalid_url(): void {
+        global $DB;
+
+        $this->log_in_enrolled_user('student');
+
+        \curl::mock_response(json_encode(['onboarding_url' => 'https://evil.test/x'] + self::WORKSPACE_RESPONSE));
+        $exception = null;
+        try {
+            quizaccess_schoolyear::get_student_onboarding_url($this->quiz->cmid);
+        } catch (\moodle_exception $e) {
+            $exception = $e;
+        }
+
+        $this->assertInstanceOf(\moodle_exception::class, $exception);
+        $this->assertSame(get_string('errorinvalidurl', 'quizaccess_schoolyear'), $exception->getMessage());
         $this->assertSame(0, $DB->count_records('quizaccess_schoolyear_token'));
     }
 
