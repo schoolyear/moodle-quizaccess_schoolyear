@@ -12,3 +12,5 @@ You need a valid Schoolyear API key in order to use the plugin. You can obtain a
  * 4.5
  * 5.0
  * 5.1
+ * 5.2
+ * 5.3
